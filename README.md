@@ -4,6 +4,13 @@
 
 > Built for the Cloudflare Software Engineering Internship (Summer 2026) assignment.
 
+[![Live App](https://img.shields.io/badge/live-cf--ai--canvas-0f172a?style=for-the-badge&logo=cloudflare)](https://cf-ai-canvas.mc146.workers.dev)
+[![Remote MCP](https://img.shields.io/badge/MCP-remote%20server-2563eb?style=for-the-badge)](https://cf-ai-canvas.mc146.workers.dev/mcp)
+[![Cloudflare Workers](https://img.shields.io/badge/Workers-edge%20runtime-f38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/workers/)
+[![Workers AI](https://img.shields.io/badge/Workers%20AI-Llama%203.3-7c3aed?style=for-the-badge&logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/workers-ai/)
+[![Durable Objects](https://img.shields.io/badge/Durable%20Objects-state-059669?style=for-the-badge&logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/durable-objects/)
+[![tldraw](https://img.shields.io/badge/tldraw-canvas-111827?style=for-the-badge)](https://tldraw.dev/)
+
 ## Live Demo
 
 - App: https://cf-ai-canvas.mc146.workers.dev
@@ -132,6 +139,24 @@ Open the deployed URL in a browser. The React client connects to `ChatAgent` wit
 npm run lint
 npm run build
 ```
+
+## 🔁 CI/CD
+
+GitHub Actions runs on every pull request and every push to `main`:
+
+- `npm ci`
+- `npm run lint`
+- `npm run build`
+- guarded Cloudflare deploy on `main`
+
+To enable automatic deployments from GitHub, add these repository secrets:
+
+| Secret | Value |
+|--------|-------|
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID for the Workers account |
+| `CLOUDFLARE_API_TOKEN` | API token scoped to edit/deploy Workers on that account |
+
+The workflow is defined in `.github/workflows/ci.yml`. If the secrets are missing, the deploy step is skipped while checks still run.
 
 ## 📁 Project Structure
 

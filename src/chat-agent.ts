@@ -10,7 +10,7 @@
  */
 import { AIChatAgent } from "@cloudflare/ai-chat";
 import { createWorkersAI } from "workers-ai-provider";
-import { streamText, convertToModelMessages, pruneMessages, tool } from "ai";
+import { generateText, streamText } from "ai";
 import { z } from "zod";
 import type { CanvasElement, CanvasState } from "./types";
 
@@ -29,6 +29,21 @@ const ColorSchema = z.enum([
 interface ChatAgentState {
   canvas: CanvasState;
 }
+
+type PlannedElement = {
+  type: CanvasElement["type"];
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  text?: string;
+  color?: CanvasElement["color"];
+};
+
+type DiagramPlan = {
+  summary: string;
+  elements: PlannedElement[];
+};
 
 export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
   initialState: ChatAgentState = {
@@ -83,165 +98,107 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
     });
   }
 
-  async onChatMessage() {
+  private getLastUserText(): string {
+    for (let index = this.messages.length - 1; index >= 0; index--) {
+      const message = this.messages[index] as any;
+      if (message.role !== "user") continue;
+
+      if (typeof message.content === "string") return message.content;
+      if (Array.isArray(message.parts)) {
+        return message.parts
+          .filter((part: any) => part?.type === "text")
+          .map((part: any) => part.text)
+          .join(" ");
+      }
+    }
+
+    return "Draw a simple diagram";
+  }
+
+  private parsePlan(rawText: string): DiagramPlan | null {
+    const trimmed = rawText.trim();
+    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const jsonText = fenced?.[1] ?? trimmed.match(/\{[\s\S]*\}/)?.[0] ?? trimmed;
+
+    try {
+      const parsed = JSON.parse(jsonText);
+      if (!Array.isArray(parsed.elements)) return null;
+
+      return {
+        summary: String(parsed.summary ?? "Created a diagram on the canvas."),
+        elements: parsed.elements.slice(0, 24).map((element: any) => ({
+          type: ShapeTypeSchema.safeParse(element.type).success ? element.type : "rectangle",
+          x: Number.isFinite(element.x) ? element.x : 100,
+          y: Number.isFinite(element.y) ? element.y : 100,
+          width: Number.isFinite(element.width) ? element.width : undefined,
+          height: Number.isFinite(element.height) ? element.height : undefined,
+          text: typeof element.text === "string" ? element.text : undefined,
+          color: ColorSchema.safeParse(element.color).success ? element.color : "blue",
+        })),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private fallbackPlan(prompt: string): DiagramPlan {
+    return {
+      summary: `Created a simple three-step diagram for: ${prompt}`,
+      elements: [
+        { type: "rectangle", x: 100, y: 120, width: 180, height: 80, text: "Start", color: "blue" },
+        { type: "arrow", x: 290, y: 150, width: 120, height: 0, color: "grey" },
+        { type: "rectangle", x: 430, y: 120, width: 200, height: 80, text: "Process", color: "green" },
+        { type: "arrow", x: 640, y: 150, width: 120, height: 0, color: "grey" },
+        { type: "rectangle", x: 780, y: 120, width: 180, height: 80, text: "Done", color: "violet" },
+      ],
+    };
+  }
+
+  private applyPlan(plan: DiagramPlan) {
+    const nextElements = { ...this.state.canvas.elements };
+    for (const input of plan.elements) {
+      const element = this.createElement(input);
+      nextElements[element.id] = element;
+    }
+    this.updateCanvas(nextElements);
+  }
+
+  async onChatMessage(onFinish?: any) {
     const workersai = createWorkersAI({ binding: this.env.AI });
+    const userPrompt = this.getLastUserText();
+
+    const planner = await generateText({
+      model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
+      system: `You convert user requests into tldraw canvas JSON.
+
+Return only valid JSON with this exact shape:
+{
+  "summary": "one short sentence describing what you created",
+  "elements": [
+    {
+      "type": "rectangle | ellipse | diamond | triangle | text | arrow | line | note | frame | star | cloud | hexagon",
+      "x": 100,
+      "y": 100,
+      "width": 180,
+      "height": 80,
+      "text": "label",
+      "color": "black | grey | blue | light-blue | violet | light-violet | red | light-red | orange | yellow | green | light-green | white"
+    }
+  ]
+}
+
+Create 4 to 12 elements for most diagrams. Use rectangles for steps, diamonds for decisions, arrows between steps, and clear labels. Use positions that do not overlap. Do not include markdown.`,
+      prompt: userPrompt,
+    });
+
+    const plan = this.parsePlan(planner.text) ?? this.fallbackPlan(userPrompt);
+    this.applyPlan(plan);
 
     const result = streamText({
       model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
-      system: `You are an AI canvas assistant. You help users create diagrams, flowcharts, and drawings on a tldraw canvas.
-
-When the user describes what they want to draw, use the available tools to create shapes, arrows, and text on the canvas. The canvas state updates in real-time for the user.
-
-Guidelines:
-- Use batch_create_elements for efficiency when creating multi-shape diagrams
-- Space elements 150-200px apart vertically or horizontally
-- Use arrows with startBoundTo/endBoundTo to connect shapes by their IDs
-- Choose appropriate colors: blue for processes, green for success/data, red for errors, violet for decisions, orange for warnings
-- Layout flowcharts top-to-bottom with 180px vertical spacing
-- Always respond with a description of what you created
-
-Available shape types: rectangle, ellipse, diamond, triangle, text, arrow, line, note, frame, star, cloud, hexagon
-Available colors: black, grey, blue, light-blue, violet, light-violet, red, light-red, orange, yellow, green, light-green, white`,
-      messages: pruneMessages({
-        messages: await convertToModelMessages(this.messages),
-        toolCalls: "before-last-2-messages",
-      }),
-      tools: {
-        // Create a single element on the canvas
-        create_element: tool({
-          description: "Create a shape on the canvas. Returns the created element with its ID (use for arrow connections).",
-          inputSchema: z.object({
-            type: ShapeTypeSchema.describe("Shape type"),
-            x: z.number().describe("X position on canvas"),
-            y: z.number().describe("Y position on canvas"),
-            width: z.number().optional().describe("Width in pixels (default: 100)"),
-            height: z.number().optional().describe("Height in pixels (default: 100)"),
-            text: z.string().optional().describe("Text label inside the shape"),
-            color: ColorSchema.optional().describe("Shape color (default: black)"),
-            startBoundTo: z.string().optional().describe("For arrows: ID of the element this arrow starts from"),
-            endBoundTo: z.string().optional().describe("For arrows: ID of the element this arrow points to"),
-          }),
-          execute: async (input) => {
-            const element = this.createElement(input);
-            const elements = { ...this.state.canvas.elements, [element.id]: element };
-            this.updateCanvas(elements);
-            return { id: element.id, type: element.type, text: element.text, position: { x: element.x, y: element.y } };
-          },
-        }),
-
-        // Batch create multiple elements (efficient for diagrams)
-        batch_create_elements: tool({
-          description: "Create multiple elements at once. Much more efficient for diagrams with many shapes. Returns all created IDs.",
-          inputSchema: z.object({
-            elements: z.array(z.object({
-              type: ShapeTypeSchema,
-              x: z.number(),
-              y: z.number(),
-              width: z.number().optional(),
-              height: z.number().optional(),
-              text: z.string().optional(),
-              color: ColorSchema.optional(),
-              startBoundTo: z.string().optional(),
-              endBoundTo: z.string().optional(),
-            })).describe("Array of elements to create"),
-          }),
-          execute: async ({ elements: inputs }) => {
-            const newElements = { ...this.state.canvas.elements };
-            const created: Array<{ id: string; type: string; text?: string }> = [];
-
-            for (const input of inputs) {
-              const element = this.createElement(input);
-              newElements[element.id] = element;
-              created.push({ id: element.id, type: element.type, text: element.text });
-            }
-
-            this.updateCanvas(newElements);
-            return { created: created.length, elements: created };
-          },
-        }),
-
-        // Clear the canvas
-        clear_canvas: tool({
-          description: "Remove all elements from the canvas. Use when user wants to start fresh.",
-          inputSchema: z.object({}),
-          execute: async () => {
-            this.updateCanvas({});
-            return { success: true, message: "Canvas cleared" };
-          },
-        }),
-
-        // Describe what's currently on the canvas
-        describe_scene: tool({
-          description: "Get a text summary of all elements currently on the canvas with their positions and connections.",
-          inputSchema: z.object({}),
-          execute: async () => {
-            const elements = Object.values(this.state.canvas.elements);
-            if (elements.length === 0) return { description: "Canvas is empty" };
-
-            const sorted = [...elements].sort((a, b) => a.y - b.y || a.x - b.x);
-            const summary = sorted.map(el => {
-              const label = el.text ? ` "${el.text}"` : "";
-              return `${el.type}${label} at (${el.x},${el.y}) [${el.color}]`;
-            }).join("\n");
-
-            const arrows = elements.filter(e => e.type === "arrow");
-            const connections = arrows.map(a => {
-              const from = a.start?.boundTo || "?";
-              const to = a.end?.boundTo || "?";
-              return `${from} → ${to}`;
-            });
-
-            return {
-              elementCount: elements.length,
-              elements: summary,
-              connections: connections.length > 0 ? connections : undefined,
-            };
-          },
-        }),
-
-        // Delete a specific element
-        delete_element: tool({
-          description: "Delete a specific element by ID",
-          inputSchema: z.object({
-            id: z.string().describe("ID of the element to delete"),
-          }),
-          execute: async ({ id }) => {
-            if (!this.state.canvas.elements[id]) {
-              return { error: `Element ${id} not found` };
-            }
-            const { [id]: _, ...rest } = this.state.canvas.elements;
-            this.updateCanvas(rest);
-            return { success: true, deleted: id };
-          },
-        }),
-
-        // Update an element
-        update_element: tool({
-          description: "Update properties of an existing element (move, resize, change color/text)",
-          inputSchema: z.object({
-            id: z.string().describe("Element ID to update"),
-            x: z.number().optional().describe("New X position"),
-            y: z.number().optional().describe("New Y position"),
-            width: z.number().optional().describe("New width"),
-            height: z.number().optional().describe("New height"),
-            text: z.string().optional().describe("New text label"),
-            color: ColorSchema.optional().describe("New color"),
-          }),
-          execute: async ({ id, ...updates }) => {
-            const element = this.state.canvas.elements[id];
-            if (!element) return { error: `Element ${id} not found` };
-
-            const updated: CanvasElement = {
-              ...element,
-              ...Object.fromEntries(Object.entries(updates).filter(([_, v]) => v !== undefined)),
-              updatedAt: new Date().toISOString(),
-            };
-            const elements = { ...this.state.canvas.elements, [id]: updated };
-            this.updateCanvas(elements);
-            return { success: true, updated: { id, ...updates } };
-          },
-        }),
-      },
+      system: `You are a concise canvas assistant. The canvas has already been updated. Reply in one short sentence with what was created. Do not include JSON or code.`,
+      prompt: `Canvas update summary: ${plan.summary}.`,
+      onFinish,
     });
 
     return result.toUIMessageStreamResponse();

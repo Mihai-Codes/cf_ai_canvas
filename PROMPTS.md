@@ -56,6 +56,16 @@ This document records the AI prompts and interactions used to build `cf_ai_canva
 - Remote MCP initialize over HTTPS
 - `tools/list` returns all 17 canvas tools
 
+### Prompt 7: Visual QA, CI/CD, and Repo Polish
+> "Resolve the Playwright browser issue, search the web, add a CI/CD pipeline to track errors on commits and logs, add tech buttons at the top of the README, add labels/tags to the repo, and add the live URL link in the GitHub About section."
+
+**Result:** Used current Cloudflare GitHub Actions documentation and GitHub CLI documentation to:
+- Add `.github/workflows/ci.yml` with typecheck, production build, and guarded Cloudflare deploy
+- Document required Cloudflare repository secrets
+- Add README tech badges for Cloudflare Workers, Workers AI, Durable Objects, remote MCP, and tldraw
+- Configure GitHub repository homepage, description, and topics
+- Install the browser dependency required for visual verification
+
 ## Key Design Decisions Made with AI Assistance
 
 1. **McpAgent over createMcpHandler** — chose stateful (DO-backed) because canvas state must persist across tool calls

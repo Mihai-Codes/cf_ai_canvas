@@ -19,9 +19,9 @@
     "build": "vite build",
     "deploy": "vite build && wrangler deploy",
     "types": "wrangler types env.d.ts --include-runtime false",
-    "test": "node test/mcp-endpoint.test.js",
-    "test:watch": "vitest",
-    "test:mcp": "node test/mcp-endpoint.test.js",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
@@ -38,6 +38,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.35.0",
     "@cloudflare/workers-types": "^4.20260501.1",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

@@ -16,6 +16,12 @@
 - App: https://cf-ai-canvas.mc146.workers.dev
 - MCP endpoint: https://cf-ai-canvas.mc146.workers.dev/mcp
 
+## tldraw-Generated Architecture
+
+Generated in the live app with the prompt `Create a Cloudflare Workers AI architecture diagram`.
+
+![tldraw-generated Cloudflare Workers AI architecture diagram](docs/assets/tldraw-architecture.png)
+
 ## Assignment Mapping
 
 | Requirement | Implementation |
@@ -81,6 +87,19 @@ sequenceDiagram
 ```
 
 The live app includes a quick prompt, `Create a Cloudflare Workers AI architecture diagram`, which uses the same tldraw canvas path to generate an architecture diagram interactively.
+
+## Canvas Rendering Note
+
+The project stores and syncs tldraw-compatible canvas elements. In local development, the full tldraw editor renders without a license. On production HTTPS domains, tldraw SDK v4+ requires a license key, so the deployed app includes a read-only SVG renderer for generated diagrams when `VITE_TLDRAW_LICENSE_KEY` is not configured.
+
+To enable the production tldraw editor, request a tldraw trial or hobby license and build with:
+
+```bash
+VITE_TLDRAW_LICENSE_KEY="your-license-key" npm run build
+npm run deploy
+```
+
+For CI/CD, add `VITE_TLDRAW_LICENSE_KEY` as a GitHub Actions secret. The workflow passes it into the Vite build step without committing the key.
 
 ## ☁️ Cloudflare Products Used
 

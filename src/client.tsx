@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useAgent } from "agents/react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
+import { toRichText } from "@tldraw/editor";
 import { createShapeId, Tldraw, type Editor, type TLCreateShapePartial } from "tldraw";
 import type { UIMessage } from "ai";
 import type { CanvasElement, CanvasState, ElementColor, ElementType } from "./types";
@@ -39,6 +40,24 @@ const GEO_MAP: Partial<Record<ElementType, string>> = {
   hexagon: "hexagon",
 };
 
+const TLDRAW_LICENSE_KEY = (import.meta as any).env?.VITE_TLDRAW_LICENSE_KEY as string | undefined;
+
+const SVG_COLOR_MAP: Record<ElementColor, { stroke: string; fill: string }> = {
+  black: { stroke: "#111827", fill: "#f8fafc" },
+  grey: { stroke: "#64748b", fill: "#f1f5f9" },
+  blue: { stroke: "#2563eb", fill: "#dbeafe" },
+  "light-blue": { stroke: "#0284c7", fill: "#e0f2fe" },
+  violet: { stroke: "#7c3aed", fill: "#ede9fe" },
+  "light-violet": { stroke: "#8b5cf6", fill: "#f3e8ff" },
+  red: { stroke: "#dc2626", fill: "#fee2e2" },
+  "light-red": { stroke: "#ef4444", fill: "#fef2f2" },
+  orange: { stroke: "#f97316", fill: "#ffedd5" },
+  yellow: { stroke: "#ca8a04", fill: "#fef9c3" },
+  green: { stroke: "#16a34a", fill: "#dcfce7" },
+  "light-green": { stroke: "#22c55e", fill: "#f0fdf4" },
+  white: { stroke: "#94a3b8", fill: "#ffffff" },
+};
+
 function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
   const base = {
     id: createShapeId(element.id),
@@ -58,11 +77,14 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
       ...base,
       type: "text",
       props: {
-        text,
+        richText: toRichText(text),
         color,
         size: element.size ?? "m",
         font: element.font ?? "draw",
         w: width,
+        textAlign: "middle",
+        autoSize: false,
+        scale: 1,
       },
     } as TLCreateShapePartial;
   }
@@ -73,13 +95,17 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
       type: "note",
       props: {
         color,
+        labelColor: color,
         size: element.size ?? "m",
         font: element.font ?? "draw",
-        text,
+        richText: toRichText(text),
         align: "middle",
         verticalAlign: "middle",
         growY: 0,
         url: "",
+        scale: 1,
+        fontSizeAdjustment: null,
+        textFirstEditedBy: null,
       },
     } as TLCreateShapePartial;
   }
@@ -109,11 +135,13 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
         dash: element.dash ?? "draw",
         size: element.size ?? "m",
         font: element.font ?? "draw",
-        text,
+        richText: toRichText(""),
+        labelColor: color,
         align: "middle",
         verticalAlign: "middle",
         growY: 0,
         url: "",
+        scale: 1,
       },
     } as TLCreateShapePartial;
   }
@@ -128,13 +156,17 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
         size: element.size ?? "m",
         fill: "none",
         font: element.font ?? "draw",
-        text,
+        richText: toRichText(text),
         labelColor: color,
         bend: 0,
         start: { x: 0, y: 0 },
         end: { x: width, y: height ?? 0 },
         arrowheadStart: "none",
         arrowheadEnd: "arrow",
+        labelPosition: 0.5,
+        scale: 1,
+        kind: "arc",
+        elbowMidPoint: 0.5,
       },
     } as TLCreateShapePartial;
   }
@@ -151,13 +183,215 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
       dash: element.dash ?? "draw",
       size: element.size ?? "m",
       font: element.font ?? "draw",
-      text,
+      richText: toRichText(text),
+      labelColor: color,
       align: "middle",
       verticalAlign: "middle",
       growY: 0,
       url: "",
+      scale: 1,
     },
   } as TLCreateShapePartial;
+}
+
+function SvgShape({ element }: { element: CanvasElement }) {
+  const color = SVG_COLOR_MAP[element.color ?? "black"];
+  const width = element.width ?? 120;
+  const height = element.height ?? 80;
+  const text = element.text ?? "";
+  const strokeProps = {
+    stroke: color.stroke,
+    strokeWidth: 3,
+    fill: element.fill === "solid" ? color.stroke : color.fill,
+  };
+
+  if (element.type === "arrow" || element.type === "line") {
+    return (
+      <g>
+        <line
+          x1={element.x}
+          y1={element.y}
+          x2={element.x + width}
+          y2={element.y + height}
+          stroke={color.stroke}
+          strokeWidth={3}
+          markerEnd={element.type === "arrow" ? "url(#arrowhead)" : undefined}
+        />
+        {text ? (
+          <text
+            x={element.x + width / 2}
+            y={element.y + height / 2 - 8}
+            textAnchor="middle"
+            className="svg-label"
+          >
+            {text}
+          </text>
+        ) : null}
+      </g>
+    );
+  }
+
+  if (element.type === "ellipse" || element.type === "cloud") {
+    return (
+      <g>
+        <ellipse
+          cx={element.x + width / 2}
+          cy={element.y + height / 2}
+          rx={width / 2}
+          ry={height / 2}
+          {...strokeProps}
+        />
+        <SvgLabel x={element.x} y={element.y} width={width} height={height} text={text} />
+      </g>
+    );
+  }
+
+  if (element.type === "diamond") {
+    const points = [
+      [element.x + width / 2, element.y],
+      [element.x + width, element.y + height / 2],
+      [element.x + width / 2, element.y + height],
+      [element.x, element.y + height / 2],
+    ].map((point) => point.join(",")).join(" ");
+    return (
+      <g>
+        <polygon points={points} {...strokeProps} />
+        <SvgLabel x={element.x} y={element.y} width={width} height={height} text={text} />
+      </g>
+    );
+  }
+
+  if (element.type === "triangle") {
+    const points = [
+      [element.x + width / 2, element.y],
+      [element.x + width, element.y + height],
+      [element.x, element.y + height],
+    ].map((point) => point.join(",")).join(" ");
+    return (
+      <g>
+        <polygon points={points} {...strokeProps} />
+        <SvgLabel x={element.x} y={element.y + height * 0.16} width={width} height={height} text={text} />
+      </g>
+    );
+  }
+
+  if (element.type === "hexagon") {
+    const points = [
+      [element.x + width * 0.22, element.y],
+      [element.x + width * 0.78, element.y],
+      [element.x + width, element.y + height / 2],
+      [element.x + width * 0.78, element.y + height],
+      [element.x + width * 0.22, element.y + height],
+      [element.x, element.y + height / 2],
+    ].map((point) => point.join(",")).join(" ");
+    return (
+      <g>
+        <polygon points={points} {...strokeProps} />
+        <SvgLabel x={element.x} y={element.y} width={width} height={height} text={text} />
+      </g>
+    );
+  }
+
+  if (element.type === "text") {
+    return (
+      <text x={element.x} y={element.y + 24} className="svg-label svg-label-standalone">
+        {text}
+      </text>
+    );
+  }
+
+  return (
+    <g>
+      <rect x={element.x} y={element.y} width={width} height={height} rx={8} {...strokeProps} />
+      <SvgLabel x={element.x} y={element.y} width={width} height={height} text={text} />
+    </g>
+  );
+}
+
+function SvgLabel({
+  x,
+  y,
+  width,
+  height,
+  text,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+}) {
+  if (!text) return null;
+  const words = text.split(/\s+/);
+  const lines = words.reduce<string[]>((acc, word) => {
+    const current = acc[acc.length - 1] ?? "";
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > 20 && current) acc.push(word);
+    else acc[acc.length - 1] = next;
+    return acc;
+  }, [""]).slice(0, 3);
+
+  const startY = y + height / 2 - ((lines.length - 1) * 18) / 2;
+  return (
+    <text x={x + width / 2} y={startY} textAnchor="middle" dominantBaseline="middle" className="svg-label">
+      {lines.map((line, index) => (
+        <tspan key={line + index} x={x + width / 2} dy={index === 0 ? 0 : 18}>
+          {line}
+        </tspan>
+      ))}
+    </text>
+  );
+}
+
+function FallbackCanvas({ canvas }: { canvas?: CanvasState }) {
+  const elements = Object.values(canvas?.elements ?? {});
+  if (elements.length === 0) {
+    return (
+      <div className="fallback-empty">
+        <p>No canvas elements yet.</p>
+      </div>
+    );
+  }
+
+  const bounds = elements.reduce(
+    (acc, element) => {
+      const width = element.width ?? 120;
+      const height = element.height ?? 80;
+      return {
+        minX: Math.min(acc.minX, element.x),
+        minY: Math.min(acc.minY, element.y),
+        maxX: Math.max(acc.maxX, element.x + width),
+        maxY: Math.max(acc.maxY, element.y + height),
+      };
+    },
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
+
+  const padding = 120;
+  const viewBox = [
+    bounds.minX - padding,
+    bounds.minY - padding,
+    bounds.maxX - bounds.minX + padding * 2,
+    bounds.maxY - bounds.minY + padding * 2,
+  ].join(" ");
+
+  return (
+    <div className="fallback-canvas" aria-label="Read-only generated canvas">
+      <svg viewBox={viewBox} role="img" aria-label="Generated diagram">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+        </defs>
+        {elements.map((element) => (
+          <SvgShape key={element.id} element={element} />
+        ))}
+      </svg>
+      <div className="fallback-note">
+        Read-only renderer. Add `VITE_TLDRAW_LICENSE_KEY` to enable the production tldraw editor.
+      </div>
+    </div>
+  );
 }
 
 function CanvasView({ canvas }: { canvas?: CanvasState }) {
@@ -178,6 +412,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
 
     editor.run(
       () => {
+        editor.updateInstanceState({ isReadonly: false });
         const currentIds = editor
           .getCurrentPageShapes()
           .filter((shape) => shape.id.startsWith("shape:"))
@@ -188,6 +423,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
           editor.createShapes(shapes);
           editor.zoomToFit({ animation: { duration: 250 } });
         }
+        editor.updateInstanceState({ isReadonly: true });
       },
       { history: "ignore" },
     );
@@ -195,16 +431,21 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
 
   return (
     <div className="canvas-shell">
-      <Tldraw
-        onMount={(editor) => {
-          editorRef.current = editor;
-          editor.updateInstanceState({ isReadonly: true });
-          if (shapes.length > 0) {
-            editor.createShapes(shapes);
-            editor.zoomToFit();
-          }
-        }}
-      />
+      {TLDRAW_LICENSE_KEY ? (
+        <Tldraw
+          licenseKey={TLDRAW_LICENSE_KEY}
+          onMount={(editor) => {
+            editorRef.current = editor;
+            if (shapes.length > 0) {
+              editor.createShapes(shapes);
+              editor.zoomToFit();
+            }
+            editor.updateInstanceState({ isReadonly: true });
+          }}
+        />
+      ) : (
+        <FallbackCanvas canvas={canvas} />
+      )}
     </div>
   );
 }

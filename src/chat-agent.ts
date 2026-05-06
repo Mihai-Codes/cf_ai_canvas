@@ -142,6 +142,23 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
   }
 
   private fallbackPlan(prompt: string): DiagramPlan {
+    if (/cloudflare workers ai architecture/i.test(prompt)) {
+      return {
+        summary: "Created a Cloudflare Workers AI architecture diagram.",
+        elements: [
+          { type: "rectangle", x: 80, y: 120, width: 190, height: 80, text: "React + tldraw UI", color: "blue" },
+          { type: "arrow", x: 290, y: 155, width: 120, height: 0, color: "grey" },
+          { type: "rectangle", x: 430, y: 120, width: 210, height: 80, text: "Cloudflare Worker", color: "orange" },
+          { type: "arrow", x: 660, y: 155, width: 120, height: 0, color: "grey" },
+          { type: "rectangle", x: 800, y: 40, width: 210, height: 80, text: "ChatAgent DO", color: "green" },
+          { type: "rectangle", x: 800, y: 210, width: 210, height: 80, text: "CanvasMCP DO", color: "violet" },
+          { type: "arrow", x: 900, y: 130, width: 0, height: 70, color: "grey" },
+          { type: "rectangle", x: 1120, y: 40, width: 190, height: 80, text: "Workers AI", color: "red" },
+          { type: "rectangle", x: 1120, y: 210, width: 190, height: 80, text: "KV Snapshots", color: "yellow" },
+        ],
+      };
+    }
+
     return {
       summary: `Created a simple three-step diagram for: ${prompt}`,
       elements: [

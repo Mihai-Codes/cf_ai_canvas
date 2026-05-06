@@ -75,6 +75,16 @@ This document records the AI prompts and interactions used to build `cf_ai_canva
 - Mermaid request-flow sequence diagram
 - Note pointing reviewers to the live tldraw architecture prompt in the deployed app
 
+### Prompt 9: Production Canvas Rendering Fix
+> "I don't see anything generated on the right side of the screen where the diagram interface is supposed to be."
+
+**Result:** Discovered that tldraw SDK v4+ requires a license key on production HTTPS domains. Kept real tldraw support behind `VITE_TLDRAW_LICENSE_KEY`, and added a production-safe read-only SVG renderer so generated diagrams remain visible on the deployed Cloudflare Worker without bypassing tldraw licensing.
+
+### Prompt 10: Licensed tldraw Production Render
+> "I have a tldraw 100-day trial license. Would that help?"
+
+**Result:** Stored the tldraw trial key as a GitHub Actions secret, passed `VITE_TLDRAW_LICENSE_KEY` into Vite builds, deployed the licensed tldraw editor, updated the tldraw v5 shape conversion to use `richText`, and captured a live tldraw-generated architecture diagram for the README.
+
 ## Key Design Decisions Made with AI Assistance
 
 1. **McpAgent over createMcpHandler** — chose stateful (DO-backed) because canvas state must persist across tool calls

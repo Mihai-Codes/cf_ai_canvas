@@ -36,6 +36,8 @@ jobs:
         run: npm run lint
 
       - name: Build
+        env:
+          VITE_TLDRAW_LICENSE_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
         run: npm run build
 
   deploy:
@@ -65,6 +67,8 @@ jobs:
         run: npm run types
 
       - name: Build
+        env:
+          VITE_TLDRAW_LICENSE_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
         run: npm run build
 
       - name: Skip deploy when Cloudflare secrets are missing

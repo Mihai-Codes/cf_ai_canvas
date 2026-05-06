@@ -460,6 +460,46 @@ export class CanvasMCP extends McpAgent<Env, CanvasState> {
       },
     );
 
+    // --- TOOL: get_canvas_stats ---
+    this.server.tool(
+      "get_canvas_stats",
+      "Return canvas element counts by type and color plus viewport information",
+      {},
+      async () => {
+        const elements = Object.values(this.state.elements);
+        const byType: Record<string, number> = {};
+        const byColor: Record<string, number> = {};
+
+        for (const element of elements) {
+          const color = element.color ?? "black";
+          byType[element.type] = (byType[element.type] ?? 0) + 1;
+          byColor[color] = (byColor[color] ?? 0) + 1;
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  totalElements: elements.length,
+                  byType,
+                  byColor,
+                  viewport: {
+                    zoom: this.state.viewportZoom,
+                    x: this.state.viewportX,
+                    y: this.state.viewportY,
+                  },
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      },
+    );
+
     // --- TOOL: read_diagram_guide ---
     this.server.tool(
       "read_diagram_guide",

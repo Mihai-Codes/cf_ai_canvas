@@ -54,7 +54,7 @@ Describe what you want to draw in natural language — flowcharts, architecture 
 | **Scene** | `describe_scene`, `export_scene`, `import_scene` |
 | **State** | `snapshot_scene`, `restore_snapshot` |
 | **Layout** | `align_elements`, `distribute_elements`, `set_viewport` |
-| **Docs** | `read_diagram_guide` |
+| **Docs/Meta** | `get_canvas_stats`, `read_diagram_guide` |
 
 ## 🚀 Quick Start
 
@@ -75,6 +75,9 @@ npm install
 # Create KV namespace (one-time)
 npx wrangler kv namespace create "CANVAS_KV"
 # Update the KV ID in wrangler.jsonc
+
+# Log in before running the full Worker locally
+npx wrangler login
 
 # Run locally
 npm run dev
@@ -116,14 +119,13 @@ npm run deploy
 
 ## 💬 Chat Interface
 
-Open the deployed URL in a browser. The split-screen UI shows:
-- **Left panel**: Chat — type natural language like "Draw a microservices architecture"
-- **Right panel**: Live canvas — shapes appear in real-time as the AI generates them
+Open the deployed URL in a browser. The React client connects to `ChatAgent` with `useAgentChat`, and the tldraw canvas renders synchronized agent state.
 
 ## 🧪 Testing
 
 ```bash
-npm test
+npm run lint
+npm run build
 ```
 
 ## 📁 Project Structure
@@ -134,9 +136,12 @@ cf_ai_canvas/
 │   ├── server.ts          # Worker entry point
 │   ├── canvas-mcp.ts      # McpAgent — 17 canvas tools + state
 │   ├── chat-agent.ts      # AIChatAgent — NL→canvas via Llama 3.3
+│   ├── client.tsx         # React chat + tldraw frontend
+│   ├── styles.css         # Frontend styling
 │   └── types.ts           # Shared TypeScript types
+├── index.html             # Vite frontend entry
 ├── public/
-│   └── index.html         # Frontend (placeholder → React in Phase 4)
+│   └── index.html         # Static fallback redirect
 ├── wrangler.jsonc          # Cloudflare configuration
 ├── PROMPTS.md              # AI prompts used (assignment requirement)
 └── README.md

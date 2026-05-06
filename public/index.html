@@ -1,87 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>cf_ai_canvas — AI-Powered Canvas</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; height: 100vh; display: flex; flex-direction: column; }
-    header { padding: 12px 20px; background: #1a1a2e; color: #fff; display: flex; align-items: center; gap: 12px; }
-    header h1 { font-size: 1.1rem; font-weight: 600; }
-    header span { font-size: 0.8rem; opacity: 0.7; }
-    .container { display: flex; flex: 1; overflow: hidden; }
-    .chat-panel { width: 380px; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; background: #f8fafc; }
-    .canvas-panel { flex: 1; display: flex; align-items: center; justify-content: center; background: #fefefe; }
-    .messages { flex: 1; overflow-y: auto; padding: 16px; }
-    .message { margin-bottom: 12px; padding: 10px 14px; border-radius: 12px; max-width: 90%; font-size: 0.9rem; line-height: 1.4; }
-    .message.user { background: #3b82f6; color: white; margin-left: auto; }
-    .message.assistant { background: #e2e8f0; color: #1e293b; }
-    .input-area { padding: 12px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; }
-    .input-area input { flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; outline: none; }
-    .input-area input:focus { border-color: #3b82f6; }
-    .input-area button { padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; }
-    .input-area button:hover { background: #2563eb; }
-    .canvas-placeholder { text-align: center; color: #94a3b8; }
-    .canvas-placeholder h2 { font-size: 1.5rem; margin-bottom: 8px; }
-    .canvas-placeholder p { font-size: 0.9rem; }
-    .badge { background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>🎨 cf_ai_canvas</h1>
-    <span class="badge">MCP</span>
-    <span>AI-Powered Collaborative Canvas on Cloudflare Workers</span>
-  </header>
-  <div class="container">
-    <div class="chat-panel">
-      <div class="messages" id="messages">
-        <div class="message assistant">
-          👋 Hi! I'm your AI canvas assistant. Describe what you'd like to draw — flowcharts, diagrams, architecture charts — and I'll create it on the canvas in real-time.
-        </div>
-      </div>
-      <div class="input-area">
-        <input type="text" id="chat-input" placeholder="Draw a login flow diagram..." />
-        <button id="send-btn">Send</button>
-      </div>
-    </div>
-    <div class="canvas-panel">
-      <div class="canvas-placeholder">
-        <h2>📐 Canvas</h2>
-        <p>tldraw canvas will render here.<br/>Shapes appear in real-time as the AI draws.</p>
-        <p style="margin-top: 16px; font-size: 0.8rem;">
-          Remote MCP endpoint: <code>/mcp</code><br/>
-          Connect from Claude, Cursor, or any MCP client.
-        </p>
-      </div>
-    </div>
-  </div>
-  <script>
-    // Minimal chat UI placeholder — will be replaced by React + useAgentChat in Phase 4
-    const input = document.getElementById('chat-input');
-    const messages = document.getElementById('messages');
-    const sendBtn = document.getElementById('send-btn');
-
-    function addMessage(text, role) {
-      const div = document.createElement('div');
-      div.className = `message ${role}`;
-      div.textContent = text;
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
-    }
-
-    function send() {
-      const text = input.value.trim();
-      if (!text) return;
-      addMessage(text, 'user');
-      input.value = '';
-      // TODO: Connect to ChatAgent via WebSocket in Phase 4
-      setTimeout(() => addMessage('🎨 Drawing... (full AI integration coming in Phase 3)', 'assistant'), 500);
-    }
-
-    sendBtn.addEventListener('click', send);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
-  </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0; url=/" />
+    <title>cf_ai_canvas</title>
+  </head>
+  <body></body>
 </html>

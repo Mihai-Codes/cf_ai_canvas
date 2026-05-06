@@ -33,13 +33,29 @@ This document records the AI prompts and interactions used to build `cf_ai_canva
 - Wrangler config with DO bindings, AI binding, KV namespace
 - Static HTML frontend placeholder
 
+### Prompt 4: GitHub Repository Move
+> "The repo needs to be under my Mihai-Codes org account, please move it there."
+
+**Result:** Created `Mihai-Codes/cf_ai_canvas`, repointed the local `origin`, pushed `main`, and updated README clone instructions.
+
+### Prompt 5: React + tldraw Frontend
+> "Continue where AdaL left off. Also search the web. Ultra-think."
+
+**Result:** Used current official Cloudflare Agents and tldraw docs to replace the placeholder page with:
+- React/Vite frontend entry
+- `useAgent` + `useAgentChat` connection to `ChatAgent`
+- tldraw canvas rendering from synchronized Durable Object state
+- Quick prompts, streaming messages, chat reset, and canvas reset
+- Production build and TypeScript verification
+
 ## Key Design Decisions Made with AI Assistance
 
 1. **McpAgent over createMcpHandler** — chose stateful (DO-backed) because canvas state must persist across tool calls
 2. **Dual-agent pattern** — ChatAgent handles NL interpretation, CanvasMCP handles canvas state. Separation of concerns.
 3. **KV for snapshots** — DO state resets per session; named snapshots need persistence beyond session lifetime
 4. **Streamable HTTP transport** — modern MCP spec standard; works with MCP Inspector, Claude, Cursor out of the box
+5. **React state sync over custom polling** — Cloudflare’s `useAgent` already provides WebSocket state synchronization, so the tldraw canvas reads `agent.state` directly.
 
 ---
 
-*More prompts will be added as development continues through Phases 2-6.*
+*More prompts will be added as development continues.*

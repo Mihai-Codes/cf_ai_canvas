@@ -16,6 +16,17 @@
 - App: https://cf-ai-canvas.mc146.workers.dev
 - MCP endpoint: https://cf-ai-canvas.mc146.workers.dev/mcp
 
+## Assignment Mapping
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **LLM** | Workers AI using Llama 3.3 for natural language to diagram planning |
+| **Workflow / coordination** | Cloudflare Workers route requests; Durable Objects coordinate per-session chat, canvas, and MCP state |
+| **User input** | React chat interface served by Cloudflare Workers static assets |
+| **Memory or state** | Durable Object state for live canvas/session data; KV for named canvas snapshots |
+| **Cloudflare deployment** | Deployed Worker at `cf-ai-canvas.mc146.workers.dev` |
+| **AI-assisted development docs** | `PROMPTS.md` records the prompts and implementation decisions |
+
 ## 🎯 What It Does
 
 Describe what you want to draw in natural language — flowcharts, architecture diagrams, system designs — and an AI agent creates it on a live canvas in real-time.
@@ -24,29 +35,52 @@ Describe what you want to draw in natural language — flowcharts, architecture 
 
 ## 🏗️ Architecture
 
+```mermaid
+flowchart LR
+  user["User"]
+  mcpClient["External MCP client\nClaude, Cursor, VS Code"]
+  frontend["React + tldraw UI\nCloudflare static assets"]
+  worker["Cloudflare Worker\nsrc/server.ts"]
+  chat["ChatAgent Durable Object\nAIChatAgent session state"]
+  mcp["CanvasMCP Durable Object\nRemote MCP server at /mcp"]
+  ai["Workers AI\nLlama 3.3"]
+  kv["Workers KV\nNamed snapshots"]
+
+  user -->|"chat prompt"| frontend
+  frontend <-->|"WebSocket state sync"| chat
+  frontend -->|"HTTP / WebSocket"| worker
+  worker --> chat
+  worker --> mcp
+  chat -->|"diagram planning"| ai
+  chat -->|"canvas state"| chat
+  mcpClient -->|"Streamable HTTP MCP"| mcp
+  mcp -->|"snapshot / restore"| kv
+  mcp -->|"17 canvas tools"| mcp
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Frontend (Chat + Canvas)                       │
-│                    React + tldraw + useAgentChat                  │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │ WebSocket
-                               ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                 Cloudflare Worker (Entry Point)                    │
-│          routeAgentRequest() → ChatAgent | CanvasMCP              │
-└─────────────┬─────────────────────────────────┬──────────────────┘
-              │                                 │
-              ▼                                 ▼
-┌──────────────────────┐          ┌──────────────────────────────┐
-│  ChatAgent           │          │  CanvasMCP (McpAgent)        │
-│  (AIChatAgent)       │          │  Remote MCP at /mcp          │
-│                      │          │                              │
-│  • Workers AI        │          │  • 17 canvas tools           │
-│    (Llama 3.3 70B)   │          │  • Persistent state (DO)     │
-│  • NL → canvas       │          │  • Snapshots (KV)            │
-│  • Chat history      │          │  • Real-time sync            │
-└──────────────────────┘          └──────────────────────────────┘
+
+## Request Flow
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant UI as React chat + tldraw
+  participant Chat as ChatAgent Durable Object
+  participant AI as Workers AI
+  participant Canvas as tldraw canvas
+  participant MCP as CanvasMCP /mcp
+  participant KV as Workers KV
+
+  User->>UI: Describe a diagram
+  UI->>Chat: Send chat message
+  Chat->>AI: Generate structured diagram plan
+  AI-->>Chat: JSON plan with shapes, labels, positions
+  Chat->>Chat: Persist canvas state
+  Chat-->>UI: Stream response + synced state
+  UI->>Canvas: Render generated shapes
+  MCP->>KV: Save or restore named snapshots
 ```
+
+The live app includes a quick prompt, `Create a Cloudflare Workers AI architecture diagram`, which uses the same tldraw canvas path to generate an architecture diagram interactively.
 
 ## ☁️ Cloudflare Products Used
 

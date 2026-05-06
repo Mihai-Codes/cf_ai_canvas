@@ -66,6 +66,15 @@ This document records the AI prompts and interactions used to build `cf_ai_canva
 - Configure GitHub repository homepage, description, and topics
 - Install the browser dependency required for visual verification
 
+### Prompt 8: Assignment Mapping and Diagrams
+> "Add architectural diagram / diagrams where necessary with tldraw where necessary."
+
+**Result:** Added reviewer-focused README material:
+- Assignment mapping table showing how each Cloudflare AI app requirement is satisfied
+- Mermaid system architecture diagram for GitHub-native rendering
+- Mermaid request-flow sequence diagram
+- Note pointing reviewers to the live tldraw architecture prompt in the deployed app
+
 ## Key Design Decisions Made with AI Assistance
 
 1. **McpAgent over createMcpHandler** — chose stateful (DO-backed) because canvas state must persist across tool calls

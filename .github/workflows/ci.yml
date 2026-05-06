@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Worker types
+        run: npm run types
+
       - name: Typecheck
         run: npm run lint
 
@@ -57,6 +60,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Generate Worker types
+        run: npm run types
 
       - name: Build
         run: npm run build

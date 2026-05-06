@@ -1,6 +1,6 @@
 # cf_ai_canvas
 
-**AI-Powered Collaborative Canvas as a Remote MCP Server on Cloudflare Workers**
+**AI-powered collaborative canvas + remote MCP server on Cloudflare Workers**
 
 > Built for the Cloudflare Software Engineering Internship (Summer 2026) assignment.
 
@@ -16,30 +16,42 @@
 - App: https://cf-ai-canvas.mc146.workers.dev
 - MCP endpoint: https://cf-ai-canvas.mc146.workers.dev/mcp
 
-## tldraw-Generated Architecture
+## Assignment Requirement → Implementation Mapping
 
-Generated in the live app with the prompt `Create a Cloudflare Workers AI architecture diagram`.
+| Assignment requirement | Concrete implementation in this repo | File(s) | Runtime proof |
+|---|---|---|---|
+| **Use an LLM** | `ChatAgent` uses Workers AI model `@cf/meta/llama-3.3-70b-instruct-fp8-fast` to turn prompts into diagram plans | `src/chat-agent.ts` | Open app, send prompt, see generated diagram + chat response |
+| **Workflow / coordination layer** | Worker routes both chat + MCP traffic and coordinates stateful agents | `src/server.ts` | `/` serves UI, `/mcp` serves remote MCP transport |
+| **User input (chat UI)** | React split-view app with quick prompts and freeform input | `src/client.tsx`, `src/styles.css` | Live app left panel accepts prompts |
+| **Memory/state** | Durable Object session state stores live canvas; KV stores named snapshots | `src/chat-agent.ts`, `src/canvas-mcp.ts`, `wrangler.jsonc` | Canvas persists within session; MCP snapshot/restore tools use KV |
+| **Remote MCP server** | `CanvasMCP` exposes 17 tools via Streamable HTTP transport | `src/canvas-mcp.ts`, `src/server.ts` | `https://cf-ai-canvas.mc146.workers.dev/mcp` + MCP Inspector `tools/list` |
+| **AI-assisted development documentation** | Prompt log and decisions captured for reviewer traceability | `PROMPTS.md` | Documented prompt history in repo |
 
-![tldraw-generated Cloudflare Workers AI architecture diagram](docs/assets/tldraw-architecture.png)
+## What to test in 2 minutes
 
-## Assignment Mapping
+1. Open the live app.
+2. Click quick prompt **Create a Cloudflare Workers AI architecture diagram**.
+3. Confirm the right-side canvas renders a rich multi-node architecture diagram.
+4. Confirm chat output is clean (no Chromium `--no-sandbox` warning text).
+5. Click quick prompt **Draw a 4-step MCP OAuth flow** and confirm non-generic flow output.
+6. (Optional) Connect MCP Inspector to `/mcp`, run `tools/list`, confirm all 17 tools.
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **LLM** | Workers AI using Llama 3.3 for natural language to diagram planning |
-| **Workflow / coordination** | Cloudflare Workers route requests; Durable Objects coordinate per-session chat, canvas, and MCP state |
-| **User input** | React chat interface served by Cloudflare Workers static assets |
-| **Memory or state** | Durable Object state for live canvas/session data; KV for named canvas snapshots |
-| **Cloudflare deployment** | Deployed Worker at `cf-ai-canvas.mc146.workers.dev` |
-| **AI-assisted development docs** | `PROMPTS.md` records the prompts and implementation decisions |
+## Screenshots (refreshed)
 
-## 🎯 What It Does
+| File | Prompt / action used | Demonstrates | Captured |
+|---|---|---|---|
+| `docs/assets/tldraw-architecture.png` | `Create a Cloudflare Workers AI architecture diagram` | Rich architecture quick prompt output on canvas | May 6, 2026 |
+| `docs/assets/chat-canvas-clean-ui-2026-05-06.png` | Quick prompt run in split view | Chat + canvas UI with clean assistant text (no `--no-sandbox`) | May 6, 2026 |
 
-Describe what you want to draw in natural language — flowcharts, architecture diagrams, system designs — and an AI agent creates it on a live canvas in real-time.
+### Screenshot refresh SOP
 
-**Plus:** Any MCP client (Claude, Cursor, Copilot, VS Code) can connect to the remote `/mcp` endpoint and programmatically control the canvas with 17 tools.
+1. Run the app (`npm run dev`) and open `http://localhost:8787`.
+2. Trigger each quick prompt once to ensure deterministic rich diagrams appear.
+3. Capture full split-view screenshots (chat + canvas visible).
+4. Save PNG files under `docs/assets/` using date-stamped names.
+5. Update this table with prompt text + capture date.
 
-## 🏗️ Architecture
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -58,194 +70,139 @@ flowchart LR
   worker --> chat
   worker --> mcp
   chat -->|"diagram planning"| ai
-  chat -->|"canvas state"| chat
   mcpClient -->|"Streamable HTTP MCP"| mcp
   mcp -->|"snapshot / restore"| kv
-  mcp -->|"17 canvas tools"| mcp
 ```
-
-## Request Flow
-
-```mermaid
-sequenceDiagram
-  participant User
-  participant UI as React chat + tldraw
-  participant Chat as ChatAgent Durable Object
-  participant AI as Workers AI
-  participant Canvas as tldraw canvas
-  participant MCP as CanvasMCP /mcp
-  participant KV as Workers KV
-
-  User->>UI: Describe a diagram
-  UI->>Chat: Send chat message
-  Chat->>AI: Generate structured diagram plan
-  AI-->>Chat: JSON plan with shapes, labels, positions
-  Chat->>Chat: Persist canvas state
-  Chat-->>UI: Stream response + synced state
-  UI->>Canvas: Render generated shapes
-  MCP->>KV: Save or restore named snapshots
-```
-
-The live app includes a quick prompt, `Create a Cloudflare Workers AI architecture diagram`, which uses the same tldraw canvas path to generate an architecture diagram interactively.
 
 ## Canvas Rendering Note
 
-The project stores and syncs tldraw-compatible canvas elements. In local development, the full tldraw editor renders without a license. On production HTTPS domains, tldraw SDK v4+ requires a license key, so the deployed app includes a read-only SVG renderer for generated diagrams when `VITE_TLDRAW_LICENSE_KEY` is not configured.
+The project stores and syncs tldraw-compatible elements. In production HTTPS environments, tldraw SDK v4+ requires a license key. If `VITE_TLDRAW_LICENSE_KEY` is absent, the app falls back to a read-only SVG renderer so generated diagrams remain visible.
 
-To enable the production tldraw editor, request a tldraw trial or hobby license and build with:
+Enable production tldraw editor with:
 
 ```bash
 VITE_TLDRAW_LICENSE_KEY="your-license-key" npm run build
 npm run deploy
 ```
 
-For CI/CD, add `VITE_TLDRAW_LICENSE_KEY` as a GitHub Actions secret. The workflow passes it into the Vite build step without committing the key.
-
-## ☁️ Cloudflare Products Used
+## Cloudflare Products Used
 
 | Product | Purpose |
-|---------|---------|
-| **Workers** | Serverless compute — hosts both agents and serves frontend |
-| **Workers AI** | Llama 3.3 70B for natural language → diagram generation |
-| **Durable Objects** | Per-session canvas state with SQLite persistence |
-| **KV** | Named canvas snapshots that persist beyond sessions |
-| **Pages/Assets** | Static frontend (React + tldraw) |
+|---|---|
+| Workers | Serverless compute for app + MCP routing |
+| Workers AI | Llama 3.3 model inference |
+| Durable Objects | Session-scoped state and synchronization |
+| Workers KV | Named snapshot persistence |
+| Assets | Frontend hosting |
 
-## 🛠️ MCP Tools (17)
+## MCP Tools (17)
 
 | Category | Tools |
-|----------|-------|
-| **CRUD** | `create_element`, `get_element`, `update_element`, `delete_element`, `batch_create_elements`, `query_elements`, `clear_canvas` |
-| **Scene** | `describe_scene`, `export_scene`, `import_scene` |
-| **State** | `snapshot_scene`, `restore_snapshot` |
-| **Layout** | `align_elements`, `distribute_elements`, `set_viewport` |
-| **Docs/Meta** | `get_canvas_stats`, `read_diagram_guide` |
+|---|---|
+| CRUD | `create_element`, `get_element`, `update_element`, `delete_element`, `batch_create_elements`, `query_elements`, `clear_canvas` |
+| Scene | `describe_scene`, `export_scene`, `import_scene` |
+| State | `snapshot_scene`, `restore_snapshot` |
+| Layout | `align_elements`, `distribute_elements`, `set_viewport` |
+| Docs/Meta | `get_canvas_stats`, `read_diagram_guide` |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Node.js 18+
 - Cloudflare account ([free tier works](https://dash.cloudflare.com/sign-up))
 
-### Local Development
+### Local development
 
 ```bash
-# Clone
 git clone https://github.com/Mihai-Codes/cf_ai_canvas.git
 cd cf_ai_canvas
-
-# Install
 npm install
 
-# Create KV namespace (one-time)
 npx wrangler kv namespace create "CANVAS_KV"
-# Update the KV ID in wrangler.jsonc
+# Then update the KV id in wrangler.jsonc
 
-# Log in before running the full Worker locally
 npx wrangler login
-
-# Run locally
 npm run dev
-# Server at http://localhost:8787
-# MCP endpoint at http://localhost:8787/mcp
+# App: http://localhost:8787
+# MCP: http://localhost:8787/mcp
 ```
 
-### Test with MCP Inspector
+### MCP Inspector
 
 ```bash
 npx @modelcontextprotocol/inspector@latest
-# Enter URL: http://localhost:8787/mcp
-# Click Connect → List Tools
+# Connect to: http://localhost:8787/mcp
 ```
 
-### Deploy to Cloudflare
+### Deploy
 
 ```bash
 npm run deploy
-# Live at https://cf-ai-canvas.mc146.workers.dev
-# MCP at https://cf-ai-canvas.mc146.workers.dev/mcp
+# App: https://cf-ai-canvas.mc146.workers.dev
+# MCP: https://cf-ai-canvas.mc146.workers.dev/mcp
 ```
 
-### Connect from Claude Desktop
+## CI/CD and required GitHub secrets
 
-```json
-{
-  "mcpServers": {
-        "canvas": {
-          "command": "npx",
-          "args": [
-            "mcp-remote",
-            "https://cf-ai-canvas.mc146.workers.dev/mcp"
-          ]
-        }
-      }
-}
-```
+GitHub Actions workflow: `.github/workflows/ci.yml`
 
-## 💬 Chat Interface
+- Runs on every PR and push to `main`
+- Executes `npm ci`, typecheck (`npm run lint`), and production `npm run build`
+- Deploy job runs only on `main` pushes and only when Cloudflare secrets are present
 
-Open the deployed URL in a browser. The React client connects to `ChatAgent` with `useAgentChat`, and the tldraw canvas renders synchronized agent state.
+### Required secrets
 
-## 🧪 Testing
+| Secret | Required value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token with Workers deploy permissions |
+| `CLOUDFLARE_ACCOUNT_ID` | `9f26393d5ba4186296b36e2af8714b1c` |
+| `VITE_TLDRAW_LICENSE_KEY` | Optional, only needed for licensed production tldraw editor |
+
+### GitHub UI setup
+
+1. Repository → **Settings** → **Secrets and variables** → **Actions**.
+2. Add the three secrets above exactly as named.
+3. Re-run latest `main` workflow.
+
+### Optional `gh` CLI setup
 
 ```bash
-npm run lint
-npm run build
+gh secret set CLOUDFLARE_ACCOUNT_ID --body "9f26393d5ba4186296b36e2af8714b1c"
+gh secret set CLOUDFLARE_API_TOKEN --body "<your-token>"
+gh secret set VITE_TLDRAW_LICENSE_KEY --body "<optional-license-key>"
 ```
 
-## 🔁 CI/CD
+### Verification checklist
 
-GitHub Actions runs on every pull request and every push to `main`:
+- Verify job passes `Typecheck and build`.
+- On `main`, verify deploy step is **not skipped**.
+- Confirm live URL serves latest commit.
 
-- `npm ci`
-- `npm run lint`
-- `npm run build`
-- guarded Cloudflare deploy on `main`
+## Project Structure
 
-To enable automatic deployments from GitHub, add these repository secrets:
-
-| Secret | Value |
-|--------|-------|
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID for the Workers account |
-| `CLOUDFLARE_API_TOKEN` | API token scoped to edit/deploy Workers on that account |
-
-The workflow is defined in `.github/workflows/ci.yml`. If the secrets are missing, the deploy step is skipped while checks still run.
-
-## 📁 Project Structure
-
-```
+```text
 cf_ai_canvas/
 ├── src/
 │   ├── server.ts          # Worker entry point
 │   ├── canvas-mcp.ts      # McpAgent — 17 canvas tools + state
-│   ├── chat-agent.ts      # AIChatAgent — NL→canvas via Llama 3.3
-│   ├── client.tsx         # React chat + tldraw frontend
+│   ├── chat-agent.ts      # AIChatAgent — NL → canvas planner + templates
+│   ├── client.tsx         # React chat + canvas UI
 │   ├── styles.css         # Frontend styling
 │   └── types.ts           # Shared TypeScript types
-├── index.html             # Vite frontend entry
-├── public/
-│   └── index.html         # Static fallback redirect
-├── wrangler.jsonc          # Cloudflare configuration
-├── PROMPTS.md              # AI prompts used (assignment requirement)
+├── docs/assets/           # README screenshots
+├── wrangler.jsonc         # Cloudflare bindings/config
+├── PROMPTS.md             # Assignment-required AI prompt log
 └── README.md
 ```
 
-## 🔒 Security
-
-- MCP endpoint is currently public (no auth required for demo)
-- GitHub OAuth can be added following the [Cloudflare MCP auth guide](https://developers.cloudflare.com/agents/guides/remote-mcp-server/#add-authentication)
-- Input validation via Zod on all tool parameters
-
-## 📚 References
+## References
 
 - [Cloudflare Agents SDK](https://developers.cloudflare.com/agents/)
 - [McpAgent API](https://developers.cloudflare.com/agents/api-reference/mcp-agent-api/)
 - [Remote MCP Server Guide](https://developers.cloudflare.com/agents/guides/remote-mcp-server/)
-- [tldraw](https://tldraw.dev/) — infinite canvas SDK
-- [Original tldraw-mcp-server](https://github.com/Mihai-Codes/tldraw-mcp-server) — local MCP server this project is based on
+- [tldraw](https://tldraw.dev/)
+- [Original tldraw-mcp-server](https://github.com/Mihai-Codes/tldraw-mcp-server)
 
-## 👤 Author
+## Author
 
 **Mihai-Alexandru Chindriș** — [GitHub](https://github.com/chindris-mihai-alexandru) | [LinkedIn](https://www.linkedin.com/in/mihai-chindris/)
-
-Built for the Cloudflare Software Engineering Internship (Summer 2026) application.

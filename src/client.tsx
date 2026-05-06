@@ -58,6 +58,24 @@ const SVG_COLOR_MAP: Record<ElementColor, { stroke: string; fill: string }> = {
   white: { stroke: "#94a3b8", fill: "#ffffff" },
 };
 
+const RUNTIME_NOISE_PATTERNS = [
+  /\b--no-sandbox\b/i,
+  /DevTools listening on ws:\/\//i,
+  /Failed to move to new namespace/i,
+  /zygote host/i,
+  /crbug\/1173575/i,
+  /Opening in existing browser session/i,
+];
+
+function sanitizeMessageText(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !RUNTIME_NOISE_PATTERNS.some((pattern) => pattern.test(line)))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
   const base = {
     id: createShapeId(element.id),
@@ -455,7 +473,9 @@ function MessagePart({ message }: { message: UIMessage }) {
     <>
       {message.parts.map((part, index) => {
         if (part.type === "text") {
-          return <span key={index}>{part.text}</span>;
+          const sanitized = sanitizeMessageText(part.text);
+          if (!sanitized) return null;
+          return <span key={index}>{sanitized}</span>;
         }
 
         if (part.type.startsWith("tool-")) {

@@ -11,11 +11,13 @@ export { ChatAgent, CanvasMCP };
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
+    
+    // Handle MCP endpoint first
     if (url.pathname.startsWith("/mcp")) {
       return canvasMcpHandler.fetch(request, env, ctx);
     }
-
-    // Route to agents (ChatAgent WebSocket, CanvasMCP /mcp endpoint)
+    
+    // Route to agents (ChatAgent WebSocket)
     const agentResponse = await routeAgentRequest(request, env);
     if (agentResponse) return agentResponse;
 

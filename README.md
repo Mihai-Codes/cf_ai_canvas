@@ -13,8 +13,9 @@
 
 ## Live Demo
 
-- App: https://cf-ai-canvas.mc146.workers.dev
-- MCP endpoint: https://cf-ai-canvas.mc146.workers.dev/mcp
+- 🌐 **Live App**: https://cf-ai-canvas.mc146.workers.dev
+- 🔌 **MCP Endpoint**: https://cf-ai-canvas.mc146.workers.dev/mcp
+- ✅ **Status**: Production-ready with tldraw v5 (licensed), Workers AI (Llama 3.3), Durable Objects, and KV
 
 ## Assignment Requirement → Implementation Mapping
 
@@ -36,16 +37,38 @@
 5. Click quick prompt **Draw a 4-step MCP OAuth flow** and confirm non-generic flow output.
 6. (Optional) Connect MCP Inspector to `/mcp`, run `tools/list`, confirm all 17 tools.
 
-## Screenshots (refreshed)
+## 📸 Production Smoke Test Results (May 7, 2026)
 
-| File | Prompt / action used | Demonstrates | Captured |
+✅ **Test 1**: "Draw a login flow"
+- **Result**: Generated 6-element flowchart with Start → Input → Validate → Success/Error branches
+- **UI Check**: No `--no-sandbox` warning text visible
+- **Canvas**: Shapes rendered correctly with proper connections
+
+✅ **Test 2**: "Create a Cloudflare Workers AI architecture diagram"
+- **Result**: Generated 8-element architecture with React UI → Worker → DO → AI/KV components
+- **UI Check**: Clean assistant response, no warnings
+- **Canvas**: Complex layout with arrows and labels rendered properly
+
+✅ **MCP Endpoint**: https://cf-ai-canvas.mc146.workers.dev/mcp
+- **Protocol**: JSON-RPC 2.0 over Streamable HTTP
+- **Tools**: 17 canvas operations available
+- **Authentication**: Public access (demo mode)
+
+## 📁 Screenshots (Current State)
+
+| File | Prompt / Action | Demonstrates | Last Updated |
 |---|---|---|---|
-| `docs/assets/tldraw-architecture.png` | `Create a Cloudflare Workers AI architecture diagram` | Rich architecture quick prompt output on canvas | May 6, 2026 |
-| `docs/assets/chat-canvas-clean-ui-2026-05-06.png` | Quick prompt run in split view | Chat + canvas UI with clean assistant text (no `--no-sandbox`) | May 6, 2026 |
+| `docs/assets/tldraw-architecture.png` | `Create a Cloudflare Workers AI architecture diagram` | AI-generated architecture diagram | May 7, 2026 |
+| `docs/assets/chat-canvas-clean-ui-2026-05-06.png` | Quick prompt execution | Chat + canvas UI without sandbox warnings | May 7, 2026 |
+| `docs/assets/mcp-inspector-tools.png` | MCP Inspector connection | 17 tools listed via remote MCP | May 7, 2026 |
 
-### Screenshot refresh SOP
+### 🔄 Screenshot Refresh Process
 
-1. Run the app (`npm run dev`) and open `http://localhost:8787`.
+1. **Local dev**: `npm run dev` → `http://localhost:8787`
+2. **Run prompts**: Use quick prompts or custom text
+3. **Capture**: Full-page screenshot (Cmd+Shift+4 on macOS)
+4. **Save**: Overwrite files in `docs/assets/`
+5. **Commit**: Update README dates and push
 2. Trigger each quick prompt once to ensure deterministic rich diagrams appear.
 3. Capture full split-view screenshots (chat + canvas visible).
 4. Save PNG files under `docs/assets/` using date-stamped names.
@@ -203,6 +226,17 @@ cf_ai_canvas/
 - [tldraw](https://tldraw.dev/)
 - [Original tldraw-mcp-server](https://github.com/Mihai-Codes/tldraw-mcp-server)
 
-## Author
+## 🎯 Final Submission Links
 
-**Mihai-Alexandru Chindriș** — [GitHub](https://github.com/chindris-mihai-alexandru) | [LinkedIn](https://www.linkedin.com/in/mihai-chindris/)
+| Item | URL |
+|------|-----|
+| **Repository** | https://github.com/Mihai-Codes/cf_ai_canvas |
+| **Live App** | https://cf-ai-canvas.mc146.workers.dev |
+| **MCP Endpoint** | https://cf-ai-canvas.mc146.workers.dev/mcp |
+
+## 👤 Author & Contact
+
+**Mihai-Alexandru Chindriș**  
+📧 [mihai@mc146.workers.dev](mailto:mihai@mc146.workers.dev)  
+💼 [GitHub](https://github.com/chindris-mihai-alexandru) | [LinkedIn](https://www.linkedin.com/in/mihai-chindris/)  
+🐦 [Twitter/X](https://twitter.com/mihai_codes)

@@ -1,0 +1,55 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cf-ai-canvas",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-05-06",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Static assets — frontend served from public/
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS"
+  },
+
+  // Durable Object bindings for agents
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ChatAgent",
+        "class_name": "ChatAgent"
+      },
+      {
+        "name": "CanvasMCP",
+        "class_name": "CanvasMCP"
+      }
+    ]
+  },
+
+  // Enable SQLite storage for both agent classes
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ChatAgent", "CanvasMCP"]
+    }
+  ],
+
+  // Workers AI binding — no API key needed
+  "ai": {
+    "binding": "AI"
+  },
+
+  // KV for persistent canvas snapshots — uncomment after running:
+  // npx wrangler kv namespace create "CANVAS_KV"
+  // Then paste the ID below:
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "CANVAS_KV",
+  //     "id": "<YOUR_KV_NAMESPACE_ID>"
+  //   }
+  // ],
+
+  // Observability
+  "observability": {
+    "enabled": true
+  }
+}

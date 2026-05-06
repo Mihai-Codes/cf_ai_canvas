@@ -4,6 +4,11 @@
 
 > Built for the Cloudflare Software Engineering Internship (Summer 2026) assignment.
 
+## Live Demo
+
+- App: https://cf-ai-canvas.mc146.workers.dev
+- MCP endpoint: https://cf-ai-canvas.mc146.workers.dev/mcp
+
 ## 🎯 What It Does
 
 Describe what you want to draw in natural language — flowcharts, architecture diagrams, system designs — and an AI agent creates it on a live canvas in real-time.
@@ -97,8 +102,8 @@ npx @modelcontextprotocol/inspector@latest
 
 ```bash
 npm run deploy
-# Live at https://cf-ai-canvas.<your-subdomain>.workers.dev
-# MCP at https://cf-ai-canvas.<your-subdomain>.workers.dev/mcp
+# Live at https://cf-ai-canvas.mc146.workers.dev
+# MCP at https://cf-ai-canvas.mc146.workers.dev/mcp
 ```
 
 ### Connect from Claude Desktop
@@ -106,14 +111,14 @@ npm run deploy
 ```json
 {
   "mcpServers": {
-    "canvas": {
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://cf-ai-canvas.<your-subdomain>.workers.dev/mcp"
-      ]
-    }
-  }
+        "canvas": {
+          "command": "npx",
+          "args": [
+            "mcp-remote",
+            "https://cf-ai-canvas.mc146.workers.dev/mcp"
+          ]
+        }
+      }
 }
 ```
 

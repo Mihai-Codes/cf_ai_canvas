@@ -3,13 +3,18 @@
  */
 import { routeAgentRequest } from "agents";
 import { ChatAgent } from "./chat-agent";
-import { CanvasMCP } from "./canvas-mcp";
+import { CanvasMCP, canvasMcpHandler } from "./canvas-mcp";
 
 // Re-export agent classes so Cloudflare can instantiate them
 export { ChatAgent, CanvasMCP };
 
 export default {
-  async fetch(request: Request, env: Env) {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/mcp")) {
+      return canvasMcpHandler.fetch(request, env, ctx);
+    }
+
     // Route to agents (ChatAgent WebSocket, CanvasMCP /mcp endpoint)
     const agentResponse = await routeAgentRequest(request, env);
     if (agentResponse) return agentResponse;

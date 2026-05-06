@@ -5,9 +5,9 @@
   "compatibility_date": "2026-05-06",
   "compatibility_flags": ["nodejs_compat"],
 
-  // Static assets — frontend served from public/
+  // Static assets — frontend served from Vite build output
   "assets": {
-    "directory": "public",
+    "directory": "dist/client",
     "binding": "ASSETS"
   },
 
@@ -38,15 +38,13 @@
     "binding": "AI"
   },
 
-  // KV for persistent canvas snapshots — uncomment after running:
-  // npx wrangler kv namespace create "CANVAS_KV"
-  // Then paste the ID below:
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "CANVAS_KV",
-  //     "id": "<YOUR_KV_NAMESPACE_ID>"
-  //   }
-  // ],
+  // KV for persistent canvas snapshots
+  "kv_namespaces": [
+    {
+      "binding": "CANVAS_KV",
+      "id": "1881537e70e54a219987bbab132d3543"
+    }
+  ],
 
   // Observability
   "observability": {

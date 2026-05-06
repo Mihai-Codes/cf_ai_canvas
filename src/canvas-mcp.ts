@@ -531,5 +531,6 @@ rectangle, ellipse, diamond, triangle, text, arrow, line, note, frame, star, clo
   }
 }
 
-// Export the MCP server handler at /mcp
-export const canvasMcpHandler = CanvasMCP.serve("/mcp");
+// Export the MCP server handler at /mcp.
+// The binding must match the Durable Object binding name in wrangler.jsonc.
+export const canvasMcpHandler = CanvasMCP.serve("/mcp", { binding: "CanvasMCP" });

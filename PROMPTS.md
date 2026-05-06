@@ -48,6 +48,14 @@ This document records the AI prompts and interactions used to build `cf_ai_canva
 - Quick prompts, streaming messages, chat reset, and canvas reset
 - Production build and TypeScript verification
 
+### Prompt 6: Deploy and Verify
+> "Ok, retry."
+
+**Result:** Authenticated Wrangler, created the `CANVAS_KV` namespace, deployed to Cloudflare Workers, fixed `/mcp` routing by explicitly forwarding the endpoint to `CanvasMCP.serve("/mcp", { binding: "CanvasMCP" })`, and verified:
+- Live frontend route: `https://cf-ai-canvas.mc146.workers.dev`
+- Remote MCP initialize over HTTPS
+- `tools/list` returns all 17 canvas tools
+
 ## Key Design Decisions Made with AI Assistance
 
 1. **McpAgent over createMcpHandler** — chose stateful (DO-backed) because canvas state must persist across tool calls

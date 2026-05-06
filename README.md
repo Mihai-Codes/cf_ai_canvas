@@ -66,7 +66,7 @@ Describe what you want to draw in natural language — flowcharts, architecture 
 
 ```bash
 # Clone
-git clone https://github.com/chindris-mihai-alexandru/cf_ai_canvas.git
+git clone https://github.com/Mihai-Codes/cf_ai_canvas.git
 cd cf_ai_canvas
 
 # Install

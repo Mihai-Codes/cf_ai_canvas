@@ -13,9 +13,9 @@
 
 ## Live Demo
 
-- 🌐 **Live App**: https://cf-ai-canvas.mc146.workers.dev
-- 🔌 **MCP Endpoint**: https://cf-ai-canvas.mc146.workers.dev/mcp
-- ✅ **Status**: Production-ready with tldraw v5 (licensed), Workers AI (Llama 3.3), Durable Objects, and KV
+-  **Live App**: https://cf-ai-canvas.mc146.workers.dev
+-  **MCP Endpoint**: https://cf-ai-canvas.mc146.workers.dev/mcp
+-  **Status**: Production-ready with tldraw v5 (licensed), Workers AI (Llama 3.3), Durable Objects, and KV
 
 ## Assignment Requirement → Implementation Mapping
 
@@ -37,24 +37,24 @@
 5. Click quick prompt **Draw a 4-step MCP OAuth flow** and confirm non-generic flow output.
 6. (Optional) Connect MCP Inspector to `/mcp`, run `tools/list`, confirm all 17 tools.
 
-## 📸 Production Smoke Test Results (May 7, 2026)
+##  Production Smoke Test Results (May 7, 2026)
 
-✅ **Test 1**: "Draw a login flow"
+ **Test 1**: "Draw a login flow"
 - **Result**: Generated 6-element flowchart with Start → Input → Validate → Success/Error branches
 - **UI Check**: No `--no-sandbox` warning text visible
 - **Canvas**: Shapes rendered correctly with proper connections
 
-✅ **Test 2**: "Create a Cloudflare Workers AI architecture diagram"
+ **Test 2**: "Create a Cloudflare Workers AI architecture diagram"
 - **Result**: Generated 8-element architecture with React UI → Worker → DO → AI/KV components
 - **UI Check**: Clean assistant response, no warnings
 - **Canvas**: Complex layout with arrows and labels rendered properly
 
-✅ **MCP Endpoint**: https://cf-ai-canvas.mc146.workers.dev/mcp
+ **MCP Endpoint**: https://cf-ai-canvas.mc146.workers.dev/mcp
 - **Protocol**: JSON-RPC 2.0 over Streamable HTTP
 - **Tools**: 17 canvas operations available
 - **Authentication**: Public access (demo mode)
 
-## 📁 Screenshots (Current State)
+##  Screenshots (Current State)
 
 | File | Prompt / Action | Demonstrates | Last Updated |
 |---|---|---|---|
@@ -62,7 +62,7 @@
 | `docs/assets/chat-canvas-clean-ui-2026-05-06.png` | Quick prompt execution | Chat + canvas UI without sandbox warnings | May 7, 2026 |
 | `docs/assets/mcp-inspector-tools.png` | MCP Inspector connection | 17 tools listed via remote MCP | May 7, 2026 |
 
-### 🔄 Screenshot Refresh Process
+###  Screenshot Refresh Process
 
 1. **Local dev**: `npm run dev` → `http://localhost:8787`
 2. **Run prompts**: Use quick prompts or custom text
@@ -226,7 +226,7 @@ cf_ai_canvas/
 - [tldraw](https://tldraw.dev/)
 - [Original tldraw-mcp-server](https://github.com/Mihai-Codes/tldraw-mcp-server)
 
-## 🎯 Final Submission Links
+##  Final Submission Links
 
 | Item | URL |
 |------|-----|
@@ -234,9 +234,8 @@ cf_ai_canvas/
 | **Live App** | https://cf-ai-canvas.mc146.workers.dev |
 | **MCP Endpoint** | https://cf-ai-canvas.mc146.workers.dev/mcp |
 
-## 👤 Author & Contact
+##  Author & Contact
 
 **Mihai-Alexandru Chindriș**  
-📧 [mihai@mc146.workers.dev](mailto:mihai@mc146.workers.dev)  
-💼 [GitHub](https://github.com/chindris-mihai-alexandru) | [LinkedIn](https://www.linkedin.com/in/mihai-chindris/)  
-🐦 [Twitter/X](https://twitter.com/mihai_codes)
+ [chindris.mihai.alexandru@gmail.com](mailto:chindris.mihai.alexandru@gmail.com)  
+ [GitHub](https://github.com/chindris-mihai-alexandru) | [LinkedIn](https://www.linkedin.com/in/mihai-chindris/)

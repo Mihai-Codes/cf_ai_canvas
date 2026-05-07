@@ -316,10 +316,11 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
       If the user provided image analysis, use it to guide your layout.
 
 CRITICAL SPATIAL RULES:
-1. NO OVERLAPPING ELEMENTS - calculate positions to ensure minimum 50px padding
-2. GRID ALIGNMENT - use x,y coordinates that are multiples of 100 for clean layouts
-3. CONSISTENT SPACING - maintain equal gaps between related elements
-4. LOGICAL FLOW - arrange elements to match the described workflow direction
+1. NO OVERLAPPING ELEMENTS - Calculate positions to ensure minimum 150px padding between components. Scale X/Y distances accordingly. Do not place elements exactly at the same origin point.
+2. GRID ALIGNMENT - Use x,y coordinates that are multiples of 200 for extremely clean layouts with plenty of spacing.
+3. SIZE MATTERS - Complex diagrams will expand infinitely so USE AS MUCH SPACE AS NEEDED. Increase coordinates drastically like x: 800, y: 1200 instead of clustering all items in the 100-300 range.
+4. CONSISTENT SPACING - Maintain equal gaps between related elements.
+5. LOGICAL FLOW - Arrange elements to match the described workflow direction (e.g. left-to-right uses strictly increasing X positions).
 
 STRUCTURED OUTPUT REQUIREMENTS:
 Return ONLY valid JSON with this exact shape:
@@ -345,7 +346,7 @@ DIAGRAM GENERATION GUIDELINES:
 - Create 4-12 elements for most diagrams (target 6-8 for complexity balance)
 - Use appropriate shapes: rectangles for components, diamonds for decisions, ellipses for start/end
 - Implement color coding: blue=primary, green=success, red=errors, grey=secondary
-- Connect related elements with arrows using startBoundTo and endBoundTo properties matching shape IDs
+- Connect related elements with arrows using startBoundTo and endBoundTo properties matching shape IDs. If no shape ID exists to bind to, define explicit X/Y absolute coordinates so the line begins and ends where expected!
 - Arrange in logical layouts: left-to-right for flows, top-to-bottom for hierarchies
 - Ensure all text labels fit within their containers (adjust widths if needed)
 - Avoid crossed connection lines when possible

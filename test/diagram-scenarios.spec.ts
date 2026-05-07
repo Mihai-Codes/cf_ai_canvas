@@ -61,29 +61,39 @@ async function waitForConnection(page: Page, timeout = 20_000) {
 }
 
 /**
- * Wait until the element-count indicator shows at least `minCount` elements.
- * LLM calls take 15-40 s depending on model load; allow up to 90 s.
+ * Wait until BOTH the element-count badge (DO state) AND the tldraw-shape-count
+ * (actual tldraw renderer) show at least minCount.
+ * This catches the split-brain case where DO has elements but tldraw doesn't render.
  */
 async function waitForElements(page: Page, minCount = 1, timeout = 90_000) {
   await page.waitForFunction(
     (min) => {
-      const el = document.querySelector('[data-testid="element-count"]');
-      if (!el) return false;
-      const match = el.textContent?.match(/(\d+)\s+elements?/);
-      return match ? parseInt(match[1], 10) >= min : false;
+      const badge = document.querySelector('[data-testid="element-count"]');
+      const tl = document.querySelector('[data-testid="tldraw-shape-count"]');
+      const badgeN = parseInt(badge?.textContent?.match(/(\d+)/)?.[1] ?? "0");
+      const tlN = parseInt(tl?.textContent ?? "0");
+      return badgeN >= min && tlN >= min;
     },
     minCount,
     { timeout },
   );
 }
 
-/** Extract the element count from the counter element. */
+/** Extract the element count from the badge (DO state). */
 async function getElementCount(page: Page): Promise<number> {
   const text = await page
     .locator('[data-testid="element-count"]')
     .textContent();
   const match = text?.match(/(\d+)/);
   return match ? parseInt(match[1], 10) : 0;
+}
+
+/** Extract the tldraw renderer shape count. */
+async function getTldrawCount(page: Page): Promise<number> {
+  const text = await page
+    .locator('[data-testid="tldraw-shape-count"]')
+    .textContent();
+  return parseInt(text ?? "0");
 }
 
 /** Reset canvas between tests using the Reset canvas button. */
@@ -121,7 +131,8 @@ test.describe("Diagram generation — all three input paths", () => {
     await waitForElements(page, 3);
 
     const count = await getElementCount(page);
-    console.log(`[quick-prompt] got ${count} elements`);
+    const tlCount = await getTldrawCount(page);
+    console.log(`[quick-prompt] badge=${count} tldraw=${tlCount}`);
 
     await page.screenshot({
       path: screenshotPath("01-quick-login-flow"),
@@ -154,7 +165,8 @@ test.describe("Diagram generation — all three input paths", () => {
     await waitForElements(page, 4);
 
     const count = await getElementCount(page);
-    console.log(`[quick-prompt] got ${count} elements`);
+    const tlCount = await getTldrawCount(page);
+    console.log(`[quick-prompt] badge=${count} tldraw=${tlCount}`);
 
     await page.screenshot({
       path: screenshotPath("02-quick-cloudflare-arch"),
@@ -177,7 +189,8 @@ test.describe("Diagram generation — all three input paths", () => {
     await waitForElements(page, 4);
 
     const count = await getElementCount(page);
-    console.log(`[quick-prompt] got ${count} elements`);
+    const tlCount = await getTldrawCount(page);
+    console.log(`[quick-prompt] badge=${count} tldraw=${tlCount}`);
 
     await page.screenshot({
       path: screenshotPath("03-quick-oauth-flow"),
@@ -208,7 +221,8 @@ test.describe("Diagram generation — all three input paths", () => {
     await waitForElements(page, 4);
 
     const count = await getElementCount(page);
-    console.log(`[manual-prompt] got ${count} elements`);
+    const tlCount = await getTldrawCount(page);
+    console.log(`[manual] badge=${count} tldraw=${tlCount}`);
 
     await page.screenshot({
       path: screenshotPath("04-manual-microservices"),
@@ -231,7 +245,8 @@ test.describe("Diagram generation — all three input paths", () => {
     await waitForElements(page, 4);
 
     const count = await getElementCount(page);
-    console.log(`[manual-prompt-data] got ${count} elements`);
+    const tlCount2 = await getTldrawCount(page);
+    console.log(`[manual-data] badge=${count} tldraw=${tlCount2}`);
 
     await page.screenshot({
       path: screenshotPath("05-manual-data-pipeline"),

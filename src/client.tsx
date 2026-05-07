@@ -9,18 +9,13 @@ import { useAgent } from "agents/react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { toRichText } from "@tldraw/editor";
 import {
-  ArrowShapeUtil,
   createShapeId,
   Tldraw,
   type Editor,
   type TLBindingCreate,
   type TLCreateShapePartial,
 } from "tldraw";
-
-// Disable white text-outline halo on arrow labels globally
-const ARROW_SHAPE_UTILS = [
-  ArrowShapeUtil.configure({ showTextOutline: false }),
-];
+// Arrow label styling is handled via CSS override in styles.css (.tl-arrow-label)
 import type { UIMessage } from "ai";
 import type {
   CanvasElement,
@@ -604,6 +599,7 @@ class CanvasErrorBoundary extends Component<
 function CanvasView({ canvas }: { canvas?: CanvasState }) {
   const editorRef = useRef<Editor | null>(null);
   const lastHashRef = useRef("");
+  const [tldrawCount, setTldrawCount] = useState(0);
 
   // Include generationId so same-content re-renders still trigger tldraw updates
   const generationId = canvas?.generationId ?? 0;
@@ -679,11 +675,23 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
       className="canvas-shell"
       style={{ width: "100%", height: "100%", minHeight: "500px" }}
     >
+      {/* Invisible element exposes actual tldraw shape count for Playwright */}
+      <span
+        data-testid="tldraw-shape-count"
+        style={{ display: "none" }}
+        aria-hidden="true"
+      >
+        {tldrawCount}
+      </span>
       <CanvasErrorBoundary>
         <Tldraw
-          shapeUtils={ARROW_SHAPE_UTILS}
           onMount={(editor) => {
             editorRef.current = editor;
+            // Subscribe to store so tldrawCount stays in sync with actual tldraw state
+            editor.store.listen(
+              () => setTldrawCount(editor.getCurrentPageShapes().length),
+              { source: "all", scope: "all" },
+            );
             if (shapes.length > 0) {
               // Same defensive individual-create pattern as useEffect above
               editor.run(

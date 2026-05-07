@@ -975,6 +975,22 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agent.state]);
 
+  // Unregister Service Workers & clear caches on load to avoid stale assets.
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const reg of regs) {
+          reg.unregister();
+        }
+      });
+      if ("caches" in window) {
+        caches.keys().then((keys) => {
+          for (const key of keys) caches.delete(key);
+        });
+      }
+    }
+  }, []);
+
   const canvas = agent.state?.canvas;
 
   return (

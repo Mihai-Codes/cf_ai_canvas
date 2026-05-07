@@ -187,9 +187,19 @@ npm test
 GitHub Actions runs on every push to `main`:
 1. Typecheck (`tsc --noEmit`)
 2. Build (`vite build`)
-3. Deploy (`npx wrangler deploy`, non-blocking — requires `Zone:Read` on the API token)
+3. Deploy (`npx wrangler deploy` — now blocking to ensure successful deployment, requires `Zone:Read` on the API token)
 
 Required secrets: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`
+
+## Troubleshooting & Cache
+
+If the canvas appears empty or disappears after a page refresh:
+
+- Perform a hard refresh (Ctrl + Shift + R / Cmd + Shift + R).
+- Open DevTools → Application → Service Workers and click “Unregister” for any registered workers.
+- The app now automatically unregisters Service Workers and clears the `caches` storage on load, reducing stale asset issues.
+- Verify the JavaScript bundle version matches the latest deploy (check the network tab for a URL containing the current `Version ID` printed in the console).
+- If errors appear in the console (e.g., “Canvas crashed”, “[canvas] Skipped shape”), report them for further debugging.
 
 ---
 

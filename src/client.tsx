@@ -883,32 +883,15 @@ function ChatPanel({
 
 function App() {
   const [connected, setConnected] = useState(false);
-  // True after the first successful WebSocket connection per page session.
-  // Prevents repeated canvas clears on DO-hibernation reconnects.
-  const sessionCleared = useRef(false);
 
   const agent = useAgent<ChatAgentState>({
     agent: "ChatAgent",
     name: "default",
-    onOpen: () => {
-      setConnected(true);
-      if (!sessionCleared.current) {
-        sessionCleared.current = true;
-        // Wait briefly for the server's initial CF_AGENT_STATE_UPDATE to arrive
-        // so the client transitions old-state → empty, not empty → empty.
-        setTimeout(() => {
-          agent.setState({
-            canvas: {
-              elements: {},
-              viewportZoom: 1,
-              viewportX: 0,
-              viewportY: 0,
-              generationId: 0,
-            },
-          });
-        }, 400);
-      }
-    },
+    // NOTE: do NOT call agent.setState here. Any client-side setState that
+    // changes generationId races with onChatMessage's updateCanvas(), causing
+    // the client to see the same generationId twice and skip the tldraw update.
+    // The server clears canvas at the top of every onChatMessage instead.
+    onOpen: () => setConnected(true),
     onClose: () => setConnected(false),
     onError: (event) => console.error("Agent WebSocket error", event),
   });

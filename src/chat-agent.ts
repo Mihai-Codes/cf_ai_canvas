@@ -569,9 +569,12 @@ DIAGRAM GENERATION GUIDELINES:
 Do not include markdown. Focus on creating clean, professional diagrams.`,
         prompt: enhancedPrompt,
       });
+      // ?? only catches null/undefined; also fall back when LLM returns {elements:[]}
+      const parsed = this.parseAndLayout(planner.text);
       plan =
-        this.parseAndLayout(planner.text) ??
-        this.generateFallbackDiagram(promptText);
+        parsed && parsed.elements.length > 0
+          ? parsed
+          : this.generateFallbackDiagram(promptText);
     } catch (_err) {
       console.error("LLM planning failed, using fallback diagram:", _err);
       plan = this.generateFallbackDiagram(promptText);

@@ -1,361 +1,384 @@
 :root {
-  color: #172033;
-  background: #f6f8fb;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+    color: #172033;
+    background: #f6f8fb;
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
 }
 
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 html,
 body,
 #root {
-  height: 100%;
-  margin: 0;
+    height: 100%;
+    margin: 0;
 }
 
 button,
 textarea {
-  font: inherit;
+    font: inherit;
 }
 
 .app {
-  display: grid;
-  grid-template-columns: minmax(340px, 420px) 1fr;
-  height: 100%;
-  overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(340px, 420px) 1fr;
+    height: 100%;
+    overflow: hidden;
 }
 
 .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 @media (max-width: 768px) {
-  .app {
-    grid-template-columns: 1fr;
-    overflow-y: auto;
-  }
-  
-  .chat-panel {
-    min-width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #dbe3ef;
-  }
-  
-  .canvas-panel {
-    min-height: 500px;
-  }
-  
-  .quick-prompts {
-    flex-wrap: wrap;
-  }
-  
-  .quick-prompts button {
-    flex: 1 1 45%;
-    margin: 4px;
-  }
-  
-  .composer textarea {
-    min-height: 100px;
-  }
+    .app {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+    }
+
+    .chat-panel {
+        min-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #dbe3ef;
+    }
+
+    .canvas-panel {
+        min-height: 500px;
+    }
+
+    .quick-prompts {
+        flex-wrap: wrap;
+    }
+
+    .quick-prompts button {
+        flex: 1 1 45%;
+        margin: 4px;
+    }
+
+    .composer textarea {
+        min-height: 100px;
+    }
 }
 
 .chat-panel {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  border-right: 1px solid #dbe3ef;
-  background: #ffffff;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    border-right: 1px solid #dbe3ef;
+    background: #ffffff;
 }
 
 .panel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px;
-  border-bottom: 1px solid #e7edf5;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px;
+    border-bottom: 1px solid #e7edf5;
 }
 
 .panel-header h1 {
-  margin: 0;
-  font-size: 1.25rem;
-  letter-spacing: 0;
+    margin: 0;
+    font-size: 1.25rem;
+    letter-spacing: 0;
 }
 
 .panel-header p {
-  margin: 4px 0 0;
-  color: #63708a;
-  font-size: 0.875rem;
+    margin: 4px 0 0;
+    color: #63708a;
+    font-size: 0.875rem;
 }
 
 .status {
-  border-radius: 8px;
-  background: #edf2f7;
-  color: #63708a;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 4px 9px;
-  text-transform: uppercase;
+    border-radius: 8px;
+    background: #edf2f7;
+    color: #63708a;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 9px;
+    text-transform: uppercase;
 }
 
 .status.connected {
-  background: #dcfce7;
-  color: #15803d;
+    background: #dcfce7;
+    color: #15803d;
 }
 
 .quick-prompts {
-  display: grid;
-  gap: 8px;
-  padding: 14px 16px;
-  border-bottom: 1px solid #eef2f7;
+    display: grid;
+    gap: 8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #eef2f7;
 }
 
 .quick-prompts button {
-  cursor: pointer;
-  border: 1px solid #dbe3ef;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #334155;
-  padding: 10px 12px;
-  text-align: left;
+    cursor: pointer;
+    border: 1px solid #dbe3ef;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #334155;
+    padding: 10px 12px;
+    text-align: left;
 }
 
 .quick-prompts button:hover {
-  border-color: #f6821f;
-  background: #fff7ed;
+    border-color: #f6821f;
+    background: #fff7ed;
 }
 
 .messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 18px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
 }
 
 .empty-message {
-  border: 1px dashed #cbd5e1;
-  border-radius: 8px;
-  color: #64748b;
-  line-height: 1.5;
-  padding: 16px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    color: #64748b;
+    line-height: 1.5;
+    padding: 16px;
 }
 
 .message {
-  margin-bottom: 14px;
-  border-radius: 8px;
-  padding: 12px 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
+    margin-bottom: 14px;
+    border-radius: 8px;
+    padding: 12px 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
 }
 
 .message strong {
-  display: block;
-  margin-bottom: 5px;
-  color: #64748b;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+    display: block;
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .message.user {
-  margin-left: auto;
-  max-width: 88%;
-  background: #2563eb;
-  color: white;
+    margin-left: auto;
+    max-width: 88%;
+    background: #2563eb;
+    color: white;
 }
 
 .message.user strong {
-  color: #dbeafe;
+    color: #dbeafe;
 }
 
 .message.assistant {
-  max-width: 95%;
-  background: #f1f5f9;
-  color: #172033;
+    max-width: 95%;
+    background: #f1f5f9;
+    color: #172033;
 }
 
 .tool-part {
-  margin-top: 8px;
-  border-radius: 8px;
-  background: #0f172a;
-  color: #e2e8f0;
-  padding: 8px 10px;
-  font-size: 0.78rem;
-  white-space: normal;
+    margin-top: 8px;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    white-space: normal;
 }
 
 .tool-part summary {
-  cursor: pointer;
-  color: #fdba74;
+    cursor: pointer;
+    color: #fdba74;
 }
 
 .tool-part pre {
-  overflow: auto;
-  white-space: pre-wrap;
+    overflow: auto;
+    white-space: pre-wrap;
 }
 
 .composer {
-  border-top: 1px solid #e7edf5;
-  padding: 14px;
+    border-top: 1px solid #e7edf5;
+    padding: 14px;
 }
 
 .composer textarea {
-  width: 100%;
-  min-height: 82px;
-  resize: vertical;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  outline: none;
-  padding: 12px;
+    width: 100%;
+    min-height: 82px;
+    resize: vertical;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+    padding: 12px;
 }
 
 .composer textarea:focus {
-  border-color: #f6821f;
-  box-shadow: 0 0 0 3px rgba(246, 130, 31, 0.15);
+    border-color: #f6821f;
+    box-shadow: 0 0 0 3px rgba(246, 130, 31, 0.15);
 }
 
 .composer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
 }
 
 .composer-actions button {
-  cursor: pointer;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: white;
-  color: #334155;
-  padding: 8px 14px;
-  font-weight: 700;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: white;
+    color: #334155;
+    padding: 8px 14px;
+    font-weight: 700;
 }
 
 .composer-actions button[type="submit"] {
-  border-color: #f6821f;
-  background: #f6821f;
-  color: white;
+    border-color: #f6821f;
+    background: #f6821f;
+    color: white;
 }
 
 .composer-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+    cursor: not-allowed;
+    opacity: 0.5;
 }
 
 .canvas-panel {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  background: #f8fafc;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    background: #f8fafc;
 }
 
 .canvas-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 20px;
-  border-bottom: 1px solid #dbe3ef;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #dbe3ef;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(10px);
 }
 
 .canvas-header h2 {
-  margin: 0;
-  font-size: 1rem;
+    margin: 0;
+    font-size: 1rem;
 }
 
 .canvas-header p {
-  margin: 3px 0 0;
-  color: #64748b;
-  font-size: 0.82rem;
+    margin: 3px 0 0;
+    color: #64748b;
+    font-size: 0.82rem;
 }
 
 .canvas-header code {
-  border-radius: 8px;
-  background: #0f172a;
-  color: #fdba74;
-  padding: 5px 10px;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #fdba74;
+    padding: 5px 10px;
 }
 
 .canvas-shell {
-  position: relative;
-  flex: 1;
-  min-height: 500px;
-  overflow: hidden;
+    position: relative;
+    flex: 1;
+    min-height: 500px;
+    overflow: hidden;
 }
 
 .fallback-empty,
 .fallback-canvas {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  background:
-    linear-gradient(#eef2f7 1px, transparent 1px),
-    linear-gradient(90deg, #eef2f7 1px, transparent 1px),
-    #fbfdff;
-  background-size: 24px 24px;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background:
+        linear-gradient(#eef2f7 1px, transparent 1px),
+        linear-gradient(90deg, #eef2f7 1px, transparent 1px), #fbfdff;
+    background-size: 24px 24px;
 }
 
 .fallback-empty {
-  display: grid;
-  place-items: center;
-  color: #64748b;
-  font-weight: 700;
+    display: grid;
+    place-items: center;
+    color: #64748b;
+    font-weight: 700;
 }
 
 .fallback-canvas svg {
-  width: 100%;
-  height: 100%;
+    width: 100%;
+    height: 100%;
 }
 
 .svg-label {
-  fill: #172033;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0;
-  pointer-events: none;
+    fill: #172033;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0;
+    pointer-events: none;
 }
 
 .svg-label-standalone {
-  font-size: 20px;
+    font-size: 20px;
 }
 
 .fallback-note {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  max-width: min(380px, calc(100% - 32px));
-  border: 1px solid #fed7aa;
-  border-radius: 8px;
-  background: #fff7ed;
-  color: #9a3412;
-  font-size: 0.78rem;
-  font-weight: 700;
-  line-height: 1.4;
-  padding: 10px 12px;
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    max-width: min(380px, calc(100% - 32px));
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.4;
+    padding: 10px 12px;
 }
 
 @media (max-width: 900px) {
-  .app {
-    grid-template-columns: 1fr;
-    grid-template-rows: 46% 54%;
-  }
+    .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: 46% 54%;
+    }
 
-  .chat-panel {
-    border-right: 0;
-    border-bottom: 1px solid #dbe3ef;
-  }
+    .chat-panel {
+        border-right: 0;
+        border-bottom: 1px solid #dbe3ef;
+    }
+}
+
+/* =============================================================
+   tldraw arrow label overrides
+   tldraw renders the label background as var(--color-background)
+   which is pure white. We add a subtle border ring and a very
+   slightly off-white tint so the box is visually grounded and
+   the arrow line stays legible on both sides of it.
+   ============================================================= */
+.tl-arrow-label {
+    box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.22) !important;
+    border-radius: 4px !important;
+    /* slight warm tint distinguishes the box from plain canvas */
+    background: #f8fafc !important;
+}
+
+/* Inner wrapper that tldraw may use in some versions */
+.tl-arrow-label__inner {
+    padding: 1px 3px !important;
 }

@@ -15,10 +15,37 @@ import * as path from "path";
 
 const APP = "https://cf-ai-canvas.mc146.workers.dev";
 
-// Tiny 10x10 white PNG for the image-upload test (pure base64, no deps)
-const TINY_PNG_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNk" +
-  "+M9Qz0AEYBxVSF+FABJADveax3/VAAAAAElFTkSuQmCC";
+/**
+ * Download a real architecture-diagram PNG from Wikipedia Commons.
+ * Falls back to an embedded micro-PNG if the download fails so the
+ * test never breaks due to network issues.
+ */
+async function fetchDiagramImage(destPath: string): Promise<void> {
+  // A publicly licensed software architecture diagram from Wikimedia Commons
+  const DIAGRAM_URL =
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/" +
+    "Developer_portal_architecture_simple.png/" +
+    "640px-Developer_portal_architecture_simple.png";
+
+  try {
+    const res = await fetch(DIAGRAM_URL, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = await res.arrayBuffer();
+    fs.writeFileSync(destPath, Buffer.from(buf));
+    console.log(
+      `[image-test] downloaded real diagram (${buf.byteLength} bytes)`,
+    );
+  } catch (err) {
+    console.warn(
+      `[image-test] download failed (${err}), using embedded fallback`,
+    );
+    // 10x10 white PNG fallback
+    const FALLBACK =
+      "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNk" +
+      "+M9Qz0AEYBxVSF+FABJADveax3/VAAAAAElFTkSuQmCC";
+    fs.writeFileSync(destPath, Buffer.from(FALLBACK, "base64"));
+  }
+}
 
 function screenshotPath(name: string) {
   const dir = path.join(process.cwd(), "test-results");
@@ -225,9 +252,9 @@ test.describe("Diagram generation — all three input paths", () => {
   }) => {
     await resetCanvas(page);
 
-    // Write the tiny test PNG to disk so Playwright can upload it
+    // Download a real architecture diagram (with local fallback)
     const imgPath = path.join(process.cwd(), "test-results", "test-input.png");
-    fs.writeFileSync(imgPath, Buffer.from(TINY_PNG_BASE64, "base64"));
+    await fetchDiagramImage(imgPath);
 
     // Set the file input
     const fileInput = page.locator('input[type="file"][id="image-upload"]');

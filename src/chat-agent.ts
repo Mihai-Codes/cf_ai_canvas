@@ -53,6 +53,19 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
     },
   };
 
+  // Add welcome message when the DO first initializes (not on reconnect)
+  override async onStart(): Promise<void> {
+    // Only add welcome message if this is a fresh conversation
+    if (this.messages.length === 0) {
+      const welcomeMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant" as const,
+        parts: [{ type: "text" as const, text: "Welcome! I can help you create diagrams on the canvas. Try prompts like \"draw a login flow\" or \"create a Cloudflare architecture diagram\". You can also attach images for multimodal diagram generation." }],
+      };
+      await this.saveMessages([welcomeMessage]);
+    }
+  }
+
   override async onConnect(connection: any): Promise<void> {
     this.setState({
       ...this.state,

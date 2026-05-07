@@ -569,19 +569,21 @@ function ChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  function send() {
+  async function send() {
     const text = input.trim();
     if (!text || isBusy) return;
     setInput("");
-    // Clear canvas automatically when sending new prompt
-    const current = agent.state ?? {
-      canvas: { elements: {}, viewportZoom: 1, viewportX: 0, viewportY: 0 },
-    };
-    agent.setState({
-      ...current,
-      canvas: { ...current.canvas, elements: {} },
-    });
-    sendMessage({ text });
+    
+    // Send message to LLM first to lock in the input state
+    await sendMessage({ text });
+
+    // Then clear canvas to avoid race conditions with LLM receiving old state
+    if (agent.state) {
+      agent.setState({
+        ...agent.state,
+        canvas: { ...agent.state.canvas, elements: {} },
+      });
+    }
   }
 
   function resetCanvas() {

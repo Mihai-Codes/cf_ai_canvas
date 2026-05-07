@@ -274,7 +274,9 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
   }
 
   private applyPlan(plan: { summary: string; elements: PlannedElement[] } | PlannedElement[]) {
-    const nextElements = { ...this.state.canvas.elements };
+    // Overwrite nextElements rather than appending to old canvas state.
+    // This ensures only the newly generated diagram renders, not both.
+    const nextElements: Record<string, CanvasElement> = {};
     const elements = Array.isArray(plan) ? plan : plan.elements;
     
     for (const input of elements) {

@@ -208,6 +208,9 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
           height: Number.isFinite(element.height) ? element.height : 80,
           text: typeof element.text === "string" ? element.text : undefined,
           color: element.color || "blue",
+          ...(element.id && { id: element.id }),
+          ...(element.startBoundTo && { startBoundTo: element.startBoundTo }),
+          ...(element.endBoundTo && { endBoundTo: element.endBoundTo }),
         })),
       };
     } catch (error) {
@@ -323,12 +326,15 @@ Return ONLY valid JSON with this exact shape:
   "elements": [
     {
       "type": "rectangle | ellipse | diamond | triangle | text | arrow | line | note | frame | star | cloud | hexagon",
+      "id": "optional_unique_string_id",
       "x": 100,
       "y": 100,
       "width": 180,
       "height": 80,
       "text": "clear label under 20 chars",
-      "color": "black | grey | blue | light-blue | violet | light-violet | red | light-red | orange | yellow | green | light-green | white"
+      "color": "black | grey | blue | light-blue | violet | light-violet | red | light-red | orange | yellow | green | light-green | white",
+      "startBoundTo": "optional_id_of_source_element_for_arrows",
+      "endBoundTo": "optional_id_of_target_element_for_arrows"
     }
   ]
 }
@@ -337,7 +343,7 @@ DIAGRAM GENERATION GUIDELINES:
 - Create 4-12 elements for most diagrams (target 6-8 for complexity balance)
 - Use appropriate shapes: rectangles for components, diamonds for decisions, ellipses for start/end
 - Implement color coding: blue=primary, green=success, red=errors, grey=secondary
-- Connect related elements with arrows (solid for main flow, dashed for optional)
+- Connect related elements with arrows using startBoundTo and endBoundTo properties matching shape IDs
 - Arrange in logical layouts: left-to-right for flows, top-to-bottom for hierarchies
 - Ensure all text labels fit within their containers (adjust widths if needed)
 - Avoid crossed connection lines when possible

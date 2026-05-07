@@ -167,10 +167,7 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
   }
 
   if (element.type === "arrow") {
-    return {
-      ...base,
-      type: "arrow",
-      props: {
+    const props: any = {
         color,
         dash: element.dash ?? "draw",
         size: element.size ?? "m",
@@ -187,7 +184,23 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
         scale: 1,
         kind: "arc",
         elbowMidPoint: 0.5,
-      },
+    };
+    
+    // @ts-ignore
+    if (element.startBoundTo) {
+      // @ts-ignore
+      props.start = { type: "binding", boundShapeId: createShapeId(element.startBoundTo), normalizedAnchor: { x: 0.5, y: 0.5 }, isExact: false, isPrecise: false };
+    }
+    // @ts-ignore
+    if (element.endBoundTo) {
+      // @ts-ignore
+      props.end = { type: "binding", boundShapeId: createShapeId(element.endBoundTo), normalizedAnchor: { x: 0.5, y: 0.5 }, isExact: false, isPrecise: false };
+    }
+
+    return {
+      ...base,
+      type: "arrow",
+      props
     } as TLCreateShapePartial;
   }
 
@@ -501,7 +514,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
               editor.createShapes(shapes);
               editor.zoomToFit();
             }
-            editor.updateInstanceState({ isReadonly: true });
+            editor.updateInstanceState({ isReadonly: false });
           }}
         />
       ) : (
@@ -560,6 +573,14 @@ function ChatPanel({
     const text = input.trim();
     if (!text || isBusy) return;
     setInput("");
+    // Clear canvas automatically when sending new prompt
+    const current = agent.state ?? {
+      canvas: { elements: {}, viewportZoom: 1, viewportX: 0, viewportY: 0 },
+    };
+    agent.setState({
+      ...current,
+      canvas: { ...current.canvas, elements: {} },
+    });
     sendMessage({ text });
   }
 

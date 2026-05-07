@@ -558,6 +558,7 @@ function ChatPanel({
   connected: boolean;
 }) {
   const [input, setInput] = useState("");
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const { messages, sendMessage, clearHistory, status, stop } = useAgentChat({
@@ -602,114 +603,36 @@ function ChatPanel({
     });
   }
 
-  return (
-    <aside className="chat-panel">
-      <div className="panel-header">
-        <div>
-          <h1>cf_ai_canvas</h1>
-          <p>Default session</p>
-        </div>
-        <span className={connected ? "status connected" : "status"}>
-          {connected ? "connected" : "offline"}
-        </span>
-      </div>
+   return (
+     <aside className="chat-panel">
+       <div className="panel-header">
+         <div>
+           <h1>cf_ai_canvas</h1>
+           <p>Default session</p>
+         </div>
+         <span className={connected ? "status connected" : "status"}>
+           {connected ? "connected" : "offline"}
+         </span>
+       </div>
 
-      <div className="quick-prompts">
-        {[
-          "Draw a login flow with success and error paths",
-          "Create a Cloudflare Workers AI architecture diagram",
-          "Draw a 4-step MCP OAuth flow",
-        ].map((prompt) => (
-          <button key={prompt} type="button" onClick={() => send(prompt)}>
-            {prompt}
-          </button>
-        ))}
-      </div>
-
-      <div className="messages">
-        {messages.length === 0 ? (
-          <div className="empty-message">
-            No messages yet.
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div key={message.id} className={`message ${message.role}`}>
-              <strong>{message.role}</strong>
-              <div>
-                <MessagePart message={message} />
-              </div>
-            </div>
-          ))
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <form
-        className="composer"
-        onSubmit={(event) => {
-          event.preventDefault();
-          send();
-        }}
-      >
-        <textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              send();
-            }
-          }}
-          placeholder="Draw a microservices diagram..."
-          disabled={!connected || isBusy}
-        />
-        <div className="composer-actions">
-          <button type="button" onClick={clearHistory}>
-            Clear chat
-          </button>
-          <button type="button" onClick={resetCanvas}>
-            Reset canvas
-          </button>
-          <input
-            type="file"
-            id="image-upload"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                  const imageData = e.target?.result;
-                  if (typeof imageData === 'string') {
-                    send(input || "Analyze this diagram", imageData);
-                  }
-                };
-                reader.readAsDataURL(file);
-              }
-            }}
-            disabled={!connected || isBusy}
-          />
-          <button type="button"
-            onClick={() => document.getElementById('image-upload')?.click()}
-            disabled={!connected || isBusy}
-            title="Attach image for multimodal analysis"
-          >
-             Attach Image
-          </button>
-          {isBusy ? (
-            <button type="button" onClick={stop}>
-              Stop
-            </button>
-          ) : (
-            <button type="submit" disabled={!connected || !input.trim()}>
-              Send
-            </button>
-          )}
-        </div>
-      </form>
-    </aside>
-  );
+       <div className="quick-prompts">
+         {[
+           "Draw a login flow with success and error paths",
+           "Create a Cloudflare Workers AI architecture diagram",
+           "Draw a 4-step MCP OAuth flow",
+           ].map((prompt) => (
+             <button key={prompt} type="button" onClick={() => setInput(prompt)}>
+               {prompt}
+             </button>
+           ))}
+       </div>
+       {previewImage && (
+         <div className="image-preview">
+           <img src={previewImage} alt="Attached image preview" style={{ maxWidth: '100%', borderRadius: '4px' }} />
+         </div>
+       )}
+     </aside>
+   );
 }
 
 function App() {

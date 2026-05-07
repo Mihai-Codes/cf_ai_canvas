@@ -626,6 +626,70 @@ function ChatPanel({
              </button>
            ))}
        </div>
+
+       <div className="messages">
+         {messages.map((message) => (
+           <div key={message.id} className={`message ${message.role}`}>
+             <strong>{message.role}</strong>
+             <div className="message-content">
+               <MessagePart message={message} />
+             </div>
+           </div>
+         ))}
+         <div ref={messagesEndRef} />
+       </div>
+
+       <form
+         className="composer"
+         onSubmit={(event) => {
+           event.preventDefault();
+           send();
+         }}
+       >
+         <textarea
+           value={input}
+           onChange={(e) => setInput(e.target.value)}
+           placeholder="Draw a microservices diagram..."
+           disabled={!connected || isBusy}
+           rows={3}
+         />
+         <div className="composer-actions">
+           <button type="button" onClick={clearHistory} disabled={messages.length === 0}>
+             Clear chat
+           </button>
+           <button type="button" onClick={resetCanvas}>
+             Reset canvas
+           </button>
+           <button
+             type="button"
+             onClick={() => document.getElementById('image-upload')?.click()}
+             disabled={!connected || isBusy}
+             title="Attach image for multimodal analysis"
+           >
+             Attach Image
+           </button>
+           <input type="file" id="image-upload" accept="image/*" style={{ display: 'none' }}
+             onChange={(event) => {
+               const file = event.target.files?.[0];
+               if (file) {
+                 const reader = new FileReader();
+                 reader.onload = (e) => {
+                   const imageData = e.target?.result;
+                   if (typeof imageData === 'string') {
+                     setPreviewImage(imageData);
+                     const enhancedPrompt = input.trim() || "Create a detailed diagram explaining the structure and components shown in this image";
+                     send(enhancedPrompt, imageData);
+                   }
+                 };
+                 reader.readAsDataURL(file);
+               }
+             }} />
+           <button type="submit" disabled={!input.trim() || isBusy}>
+             {isBusy ? "Wait..." : "Send"}
+           </button>
+         </div>
+       </form>
+
        {previewImage && (
          <div className="image-preview">
            <img src={previewImage} alt="Attached image preview" style={{ maxWidth: '100%', borderRadius: '4px' }} />

@@ -182,11 +182,11 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
       }
 
       if (text || hasImage) {
-        return { text: text || "Draw a simple diagram", hasImage, imageData };
+        return { text: text || "", hasImage, imageData };
       }
     }
 
-    return { text: "Draw a simple diagram", hasImage: false };
+    return { text: "", hasImage: false };
   }
 
   private parsePlan(rawText: string): { summary: string; elements: PlannedElement[] } | null {

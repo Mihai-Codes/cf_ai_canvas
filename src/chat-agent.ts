@@ -125,12 +125,8 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     }
   }
 
-  override async onConnect(connection: any): Promise<void> {
-    this.setState({
-      ...this.state,
-      canvas: { elements: {}, viewportZoom: 1, viewportX: 0, viewportY: 0 },
-    });
-  }
+  // onConnect intentionally left empty — canvas state must persist across
+  // WebSocket reconnections (DO hibernation during LLM calls causes reconnects).
 
   private parseAndLayout(
     rawText: string,

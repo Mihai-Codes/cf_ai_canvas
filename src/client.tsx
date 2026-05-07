@@ -721,16 +721,9 @@ function ChatPanel({
     const text = overrideText ?? input.trim();
     if (!text || isBusy) return;
     setInput("");
-
-    // Clear canvas to avoid race conditions with LLM receiving old state
-    if (agent.state) {
-      agent.setState({
-        ...agent.state,
-        canvas: { ...agent.state.canvas, elements: {} },
-      });
-    }
-
-    // Send message to LLM first to lock in the input state
+    // Do NOT clear canvas here — agent.setState is a server-side write;
+    // pushing empty state races against the LLM response and wipes diagrams.
+    // The server replaces canvas elements atomically in applyPlan().
     if (imageData) {
       await sendMessage({
         text,
@@ -765,7 +758,10 @@ function ChatPanel({
           <h1>cf_ai_canvas</h1>
           <p>Default session</p>
         </div>
-        <span className={connected ? "status connected" : "status"}>
+        <span
+          className={connected ? "status connected" : "status"}
+          data-testid="connection-status"
+        >
           {connected ? "connected" : "offline"}
         </span>
       </div>
@@ -776,7 +772,13 @@ function ChatPanel({
           "Create a Cloudflare Workers AI architecture diagram",
           "Draw a 4-step MCP OAuth flow",
         ].map((prompt) => (
-          <button key={prompt} type="button" onClick={() => setInput(prompt)}>
+          <button
+            key={prompt}
+            type="button"
+            disabled={!connected || isBusy}
+            data-testid="quick-prompt"
+            onClick={() => send(prompt)}
+          >
             {prompt}
           </button>
         ))}
@@ -807,6 +809,7 @@ function ChatPanel({
           placeholder="Draw a microservices diagram..."
           disabled={!connected || isBusy}
           rows={3}
+          data-testid="chat-input"
         />
         <div className="composer-actions">
           <button
@@ -889,7 +892,9 @@ function App() {
         <div className="canvas-header">
           <div>
             <h2>Live Canvas</h2>
-            <p>{Object.keys(canvas?.elements ?? {}).length} elements</p>
+            <p data-testid="element-count">
+              {Object.keys(canvas?.elements ?? {}).length} elements
+            </p>
           </div>
           <code>/mcp</code>
         </div>

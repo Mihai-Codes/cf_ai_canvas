@@ -37,17 +37,22 @@ type PlannedElement = {
 
 function computeLayout(
   elements: SemElement[]
-): Array<{ id: string; x: number; y: number; rank: number; width: number; height: number; type: string }> {
+): Array<{ id: string; x: number; y: number; rank: number; width: number; height: number }> {
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: "LR", nodesep: NODE_SEP, ranksep: RANKSEP, marginx: MARGIN_X, marginy: MARGIN_Y });
   g.setDefaultEdgeLabel(() => ({}));
 
-  elements.forEach(n => {
+  // Only non-arrow elements become nodes in the layout graph
+  const nodes = elements.filter(e => e.type !== "arrow" && e.type !== "line");
+
+  // Add nodes to Dagre
+  nodes.forEach(n => {
     const w = n.width ?? 180;
     const h = n.height ?? 80;
     g.setNode(n.id, { width: w, height: h });
   });
 
+  // Add edges for arrow connections (note: these are NOT nodes themselves)
   elements.forEach(e => {
     if ((e.type === "arrow" || e.type === "line") && e.startBoundTo && e.endBoundTo) {
       g.setEdge(e.startBoundTo, e.endBoundTo);
@@ -56,18 +61,12 @@ function computeLayout(
 
   dagre.layout(g);
 
-  return elements.map(n => {
+  // Return positions for nodes only
+  return nodes.map(n => {
     const w = n.width ?? 180;
     const h = n.height ?? 80;
-    if ((n.type === "arrow" || n.type === "line") && n.startBoundTo && n.endBoundTo) {
-      const src = g.node(n.startBoundTo) as any;
-      const tgt = g.node(n.endBoundTo) as any;
-      if (src && tgt) {
-        return { id: n.id, x: src.x, y: src.y, rank: src.rank ?? 0, width: w, height: h, type: n.type };
-      }
-    }
     const raw = g.node(n.id) as any;
-    if (!raw) return { id: n.id, x: MARGIN_X, y: MARGIN_Y, rank: 0, width: w, height: h, type: n.type };
+    if (!raw) return { id: n.id, x: MARGIN_X, y: MARGIN_Y, rank: 0, width: w, height: h };
     return {
       id: n.id,
       x: raw.x - w / 2,
@@ -75,7 +74,6 @@ function computeLayout(
       rank: raw.rank ?? 0,
       width: w,
       height: h,
-      type: n.type,
     };
   });
 }
@@ -107,7 +105,6 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     const trimmed = rawText.trim();
     const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
     const jsonText = fenced?.[1] ?? trimmed.match(/\{[\s\S]*\}/)?.[0] ?? trimmed;
-
     const LLMOutputSchema = z.object({
       summary: z.string().optional(),
       elements: z.array(z.object({
@@ -121,14 +118,113 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
         endBoundTo: z.string().optional(),
       })),
     });
-
     try {
       const parsed = LLMOutputSchema.parse(JSON.parse(jsonText));
       const summary = parsed.summary ?? "Created a diagram on the canvas.";
-
       let idCounter = 0;
-      const semElements: SemElement[] = parsed.elements.slice(0, 24).map(el => ({
-        id: el.id ?? `elem_${++idCounter}`,
+      const semElements: SemElement[] = [];
+      const arrowElements: SemElement[] = [];
+      for (const el of parsed.elements.slice(0, 24)) {
+        const id = el.id ?? `elem_${++idCounter}`;
+        const semEl: SemElement = {
+          id,
+          type: el.type,
+          width: el.width,
+          height: el.height,
+          text: el.text,
+          color: el.color,
+          startBoundTo: el.startBoundTo,
+          endBoundTo: el.endBoundTo,
+        };
+        if (el.type === "arrow" || el.type === "line") {
+          arrowElements.push(semEl);
+        } else {
+          semElements.push(semEl);
+        }
+      }
+      // Compute layout positions for nodes only
+      const positions = computeLayout(semElements);
+      const posMap = new Map(positions.map(p => [p.id, p]));
+      // Merge positions for nodes, and assign placeholder positions for arrows
+      const planned: PlannedElement[] = [
+        ...semElements.map(sem => {
+          const pos = posMap.get(sem.id)!;
+          return {
+            id: sem.id,
+            type: sem.type,
+            x: pos.x,
+            y: pos.y,
+            width: pos.width,
+            height: pos.height,
+            text: sem.text,
+            color: sem.color ?? "blue",
+            startBoundTo: sem.startBoundTo,
+            endBoundTo: sem.endBoundTo,
+          };
+        }),
+        ...arrowElements.map(arrow => {
+          // For arrows, try to compute midpoint between connected nodes as initial position
+          const startId = arrow.startBoundTo;
+          const endId = arrow.endBoundTo;
+          let x = MARGIN_X;
+          let y = MARGIN_Y;
+          if (startId && posMap.has(startId) && endId && posMap.has(endId)) {
+            const start = posMap.get(startId)!;
+            const end = posMap.get(endId)!;
+            x = (start.x + end.x) / 2 - (arrow.width ?? 60) / 2;
+            y = (start.y + end.y) / 2 - (arrow.height ?? 4) / 2;
+          }
+          return {
+            id: arrow.id,
+            type: arrow.type,
+            x,
+            y,
+            width: arrow.width ?? 60,
+            height: arrow.height ?? 4,
+            text: arrow.text,
+            color: arrow.color ?? "blue",
+            startBoundTo: arrow.startBoundTo,
+            endBoundTo: arrow.endBoundTo,
+          };
+        }),
+      ];
+      return { summary, elements: planned };
+    } catch (error) {
+      console.error("Failed to parse/layout diagram:", error);
+      return null;
+     }
+   }
+
+   private generateFallbackDiagram(userPrompt: string): { summary: string; elements: PlannedElement[] } {
+    const lowerPrompt = userPrompt.toLowerCase();
+    let patternName = DIAGRAM_PATTERNS[0].name;
+    for (const pattern of DIAGRAM_PATTERNS) {
+      if (pattern.keywords.some(keyword => lowerPrompt.includes(keyword))) {
+        patternName = pattern.name;
+        break;
+      }
+    }
+    if (lowerPrompt.includes("login") || lowerPrompt.includes("auth") || lowerPrompt.includes("sign")) {
+      patternName = "login_flow";
+    } else if (lowerPrompt.includes("cloudflare") || lowerPrompt.includes("architecture")) {
+      patternName = "cloudflare_architecture";
+    } else if (lowerPrompt.includes("oauth")) {
+      patternName = "oauth_flow";
+    } else if (lowerPrompt.includes("microservice") || lowerPrompt.includes("service")) {
+      patternName = "microservices";
+    } else if (lowerPrompt.includes("database") || lowerPrompt.includes("storage") || lowerPrompt.includes("data")) {
+      patternName = "data_flow";
+    }
+    const pattern = DIAGRAM_PATTERNS.find(p => p.name === patternName)!;
+    const rawElements = pattern.generate(userPrompt);
+    // Convert pattern's gridCol/gridRow → semantic (no positions yet). Separate nodes and arrows.
+    const nodeElements: SemElement[] = [];
+    const arrowElements: SemElement[] = [];
+    let idCounter = 0;
+    rawElements.forEach((el: any) => {
+      const id = el.id ?? `fallback_${++idCounter}`;
+      const semEl: SemElement = {
+        id,
         type: el.type,
         width: el.width,
         height: el.height,
@@ -136,12 +232,19 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
         color: el.color,
         startBoundTo: el.startBoundTo,
         endBoundTo: el.endBoundTo,
-      }));
-
-      const positions = computeLayout(semElements);
-      const posMap = new Map(positions.map(p => [p.id, p]));
-
-      const planned: PlannedElement[] = semElements.map(sem => {
+      };
+      if (el.type === "arrow" || el.type === "line") {
+        arrowElements.push(semEl);
+      } else {
+        nodeElements.push(semEl);
+      }
+    });
+    // Compute layout for nodes only
+    const positions = computeLayout(nodeElements);
+    const posMap = new Map(positions.map(p => [p.id, p]));
+    // Merge node positions and compute arrow midpoints
+    const planned: PlannedElement[] = [
+      ...nodeElements.map(sem => {
         const pos = posMap.get(sem.id)!;
         return {
           id: sem.id,
@@ -155,78 +258,39 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
           startBoundTo: sem.startBoundTo,
           endBoundTo: sem.endBoundTo,
         };
-      });
-
-      return { summary, elements: planned };
-    } catch (error) {
-      console.error("Failed to parse/layout diagram:", error);
-      return null;
-    }
-  }
-
-  private generateFallbackDiagram(userPrompt: string): { summary: string; elements: PlannedElement[] } {
-    const lowerPrompt = userPrompt.toLowerCase();
-
-    let patternName = DIAGRAM_PATTERNS[0].name;
-    for (const pattern of DIAGRAM_PATTERNS) {
-      if (pattern.keywords.some(keyword => lowerPrompt.includes(keyword))) {
-        patternName = pattern.name;
-        break;
-      }
-    }
-
-    if (lowerPrompt.includes("login") || lowerPrompt.includes("auth") || lowerPrompt.includes("sign")) {
-      patternName = "login_flow";
-    } else if (lowerPrompt.includes("cloudflare") || lowerPrompt.includes("architecture")) {
-      patternName = "cloudflare_architecture";
-    } else if (lowerPrompt.includes("oauth")) {
-      patternName = "oauth_flow";
-    } else if (lowerPrompt.includes("microservice") || lowerPrompt.includes("service")) {
-      patternName = "microservices";
-    } else if (lowerPrompt.includes("database") || lowerPrompt.includes("storage") || lowerPrompt.includes("data")) {
-      patternName = "data_flow";
-    }
-
-    const pattern = DIAGRAM_PATTERNS.find(p => p.name === patternName)!;
-    const rawElements = pattern.generate(userPrompt);
-
-    const semElements: SemElement[] = rawElements.map((el: any, idx: number) => ({
-      id: el.id ?? `fallback_${idx}`,
-      type: el.type,
-      width: el.width,
-      height: el.height,
-      text: el.text,
-      color: el.color,
-      startBoundTo: el.startBoundTo,
-      endBoundTo: el.endBoundTo,
-    }));
-
-    const positions = computeLayout(semElements);
-    const posMap = new Map(positions.map(p => [p.id, p]));
-
-    const planned: PlannedElement[] = semElements.map(sem => {
-      const pos = posMap.get(sem.id)!;
-      return {
-        id: sem.id,
-        type: sem.type,
-        x: pos.x,
-        y: pos.y,
-        width: pos.width,
-        height: pos.height,
-        text: sem.text,
-        color: sem.color ?? "blue",
-        startBoundTo: sem.startBoundTo,
-        endBoundTo: sem.endBoundTo,
-      };
-    });
-
+      }),
+      ...arrowElements.map(arrow => {
+        const startId = arrow.startBoundTo;
+        const endId = arrow.endBoundTo;
+        let x = MARGIN_X;
+        let y = MARGIN_Y;
+        if (startId && posMap.has(startId) && endId && posMap.has(endId)) {
+          const start = posMap.get(startId)!;
+          const end = posMap.get(endId)!;
+          x = (start.x + end.x) / 2 - (arrow.width ?? 60) / 2;
+          y = (start.y + end.y) / 2 - (arrow.height ?? 4) / 2;
+        }
+        return {
+          id: arrow.id,
+          type: arrow.type,
+          x,
+          y,
+          width: arrow.width ?? 60,
+          height: arrow.height ?? 4,
+          text: arrow.text,
+          color: arrow.color ?? "blue",
+          startBoundTo: arrow.startBoundTo,
+          endBoundTo: arrow.endBoundTo,
+        };
+      }),
+    ];
     return {
       summary: `Created a ${patternName.replace(/_/g, " ")} diagram`,
       elements: planned,
-    };
-  }
+     };
+   }
 
-  private createElement(input: {
+   private createElement(input: {
     id?: string;
     type: string;
     x: number;

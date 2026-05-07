@@ -53,6 +53,13 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
     },
   };
 
+  override async onConnect(connection: any): Promise<void> {
+    this.setState({
+      ...this.state,
+      canvas: { elements: {}, viewportZoom: 1, viewportX: 0, viewportY: 0 },
+    });
+  }
+
   // Helper: create an element and persist to state
   private createElement(input: {
     type: string;

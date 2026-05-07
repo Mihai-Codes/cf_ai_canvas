@@ -123,24 +123,23 @@ test.describe('cf_ai_canvas Application Tests', () => {
   test('should verify canvas expands for complex diagrams', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.locator('.canvas-panel')).toBeVisible({ timeout: 15000 });
+
     const textarea = page.locator('textarea[placeholder="Draw a microservices diagram..."]');
+    await textarea.waitFor({ state: 'attached', timeout: 15000 });
     await textarea.fill('Draw a detailed Cloudflare Workers architecture with React frontend, Worker router, ChatAgent DO, CanvasMCP DO, Workers AI integration, KV storage, and all connections clearly labeled');
-    
+
     const sendButton = page.locator('button:has-text("Send")');
     await sendButton.click();
-    
-    await page.waitForTimeout(8000);
-    
-    // Switch to desktop viewport size again to restore state
-    await page.setViewportSize({ width: 1280, height: 800 });
-    
-    const canvasPanel = page.locator('.canvas-panel');
-    await expect(canvasPanel).toBeVisible();
-    
-    const canvasBounds = await canvasPanel.boundingBox();
+
+    await expect(page.locator('.canvas-panel')).toBeVisible({ timeout: 60000 });
+
+    const canvasBounds = await page.locator('.canvas-panel').boundingBox();
     expect(canvasBounds?.width).toBeGreaterThan(600);
     expect(canvasBounds?.height).toBeGreaterThan(400);
-    
+
     await page.screenshot({ path: 'test-results/complex-architecture.png', fullPage: true });
   });
 

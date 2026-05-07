@@ -27,8 +27,10 @@
   "dependencies": {
     "@cloudflare/ai-chat": "^0.6.2",
     "@modelcontextprotocol/sdk": "^1.12.1",
+    "@types/dagre": "^0.7.54",
     "agents": "^0.12.3",
     "ai": "^6.0.174",
+    "dagre": "^0.8.5",
     "i18next": "^26.0.9",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

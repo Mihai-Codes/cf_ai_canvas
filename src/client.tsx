@@ -1,7 +1,14 @@
 import "./styles.css";
 import "tldraw/tldraw.css";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  Component,
+} from "react";
 import { createRoot } from "react-dom/client";
 import i18n from "i18next";
 import { initReactI18next, useTranslation } from "react-i18next";
@@ -12,6 +19,7 @@ import {
   createShapeId,
   Tldraw,
   type Editor,
+  type TLBindingCreate,
   type TLCreateShapePartial,
 } from "tldraw";
 import type { UIMessage } from "ai";
@@ -191,7 +199,7 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
       labelColor: color,
       bend: 0,
       start: { x: 0, y: 0 },
-      end: { x: width, y: height ?? 0 },
+      end: { x: 200, y: 0 },
       arrowheadStart: "none",
       arrowheadEnd: "arrow",
       labelPosition: 0.5,
@@ -200,27 +208,8 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
       elbowMidPoint: 0.5,
     };
 
-    // Bindings are stored in element.start.boundTo / element.end.boundTo
-    const startBound = element.start?.boundTo;
-    const endBound = element.end?.boundTo;
-    if (startBound) {
-      props.start = {
-        type: "binding",
-        boundShapeId: createShapeId(startBound),
-        normalizedAnchor: { x: 0.5, y: 0.5 },
-        isExact: false,
-        isPrecise: false,
-      };
-    }
-    if (endBound) {
-      props.end = {
-        type: "binding",
-        boundShapeId: createShapeId(endBound),
-        normalizedAnchor: { x: 0.5, y: 0.5 },
-        isExact: false,
-        isPrecise: false,
-      };
-    }
+    // Bindings are created separately via editor.createBindings() — see CanvasView.
+    // start/end must be plain VecModel in tldraw v5.
 
     return {
       ...base,
@@ -250,6 +239,41 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
       scale: 1,
     },
   } as TLCreateShapePartial;
+}
+
+function toTldrawBindings(elements: CanvasElement[]): TLBindingCreate[] {
+  const bindings: TLBindingCreate[] = [];
+  for (const element of elements) {
+    if (element.type !== "arrow") continue;
+    const arrowId = createShapeId(element.id);
+    if (element.start?.boundTo) {
+      bindings.push({
+        type: "arrow",
+        fromId: arrowId,
+        toId: createShapeId(element.start.boundTo),
+        props: {
+          terminal: "start",
+          normalizedAnchor: { x: 0.5, y: 0.5 },
+          isExact: false,
+          isPrecise: false,
+        },
+      } as TLBindingCreate);
+    }
+    if (element.end?.boundTo) {
+      bindings.push({
+        type: "arrow",
+        fromId: arrowId,
+        toId: createShapeId(element.end.boundTo),
+        props: {
+          terminal: "end",
+          normalizedAnchor: { x: 0.5, y: 0.5 },
+          isExact: false,
+          isPrecise: false,
+        },
+      } as TLBindingCreate);
+    }
+  }
+  return bindings;
 }
 
 function SvgShape({ element }: { element: CanvasElement }) {
@@ -541,102 +565,107 @@ function FallbackCanvas({ canvas }: { canvas?: CanvasState }) {
   );
 }
 
+class CanvasErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("Canvas crashed:", error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div
+          style={{ padding: 24, color: "#dc2626", fontFamily: "sans-serif" }}
+        >
+          <strong>Canvas error:</strong> {this.state.error?.message}
+          <br />
+          <button
+            style={{ marginTop: 12, padding: "6px 12px", cursor: "pointer" }}
+            onClick={() => this.setState({ hasError: false, error: null })}
+          >
+            Reset canvas
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function CanvasView({ canvas }: { canvas?: CanvasState }) {
   const editorRef = useRef<Editor | null>(null);
   const lastHashRef = useRef("");
-  const [isRendering, setIsRendering] = useState(false);
 
-  const shapes = useMemo(() => {
-    return Object.values(canvas?.elements ?? {}).map(toTldrawShape);
-  }, [canvas?.elements]);
-
-  const batchProcessShapes = useCallback(
-    (shapes: TLCreateShapePartial[], batchSize = 20) => {
-      const batches: TLCreateShapePartial[][] = [];
-      for (let i = 0; i < shapes.length; i += batchSize) {
-        batches.push(shapes.slice(i, i + batchSize));
-      }
-      return batches;
-    },
-    [],
+  const elements = useMemo(
+    () => Object.values(canvas?.elements ?? {}),
+    [canvas?.elements],
   );
+
+  const shapes = useMemo(() => elements.map(toTldrawShape), [elements]);
+
+  const bindings = useMemo(() => toTldrawBindings(elements), [elements]);
 
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor || isRendering) return;
+    if (!editor) return;
 
     const nextHash = JSON.stringify(shapes);
     if (nextHash === lastHashRef.current) return;
     lastHashRef.current = nextHash;
 
-    if (shapes.length > 50) {
-      setIsRendering(true);
-      const batches = batchProcessShapes(shapes);
-
+    try {
       editor.run(
         () => {
           editor.updateInstanceState({ isReadonly: false });
-          const currentIds = editor
-            .getCurrentPageShapes()
-            .filter((shape) => shape.id.startsWith("shape:"))
-            .map((shape) => shape.id);
-
-          if (currentIds.length > 0) editor.deleteShapes(currentIds);
-
-          batches.forEach((batch: TLCreateShapePartial[]) => {
-            if (batch.length > 0) {
-              editor.createShapes(batch);
-            }
-          });
-
-          editor.zoomToFit({ animation: { duration: 250 } });
-          // Keep editable so users can drag components around
-          editor.updateInstanceState({ isReadonly: false });
-          setIsRendering(false);
-        },
-        { history: "ignore" },
-      );
-    } else {
-      editor.run(
-        () => {
-          editor.updateInstanceState({ isReadonly: false });
-          const currentIds = editor
-            .getCurrentPageShapes()
-            .filter((shape) => shape.id.startsWith("shape:"))
-            .map((shape) => shape.id);
-
+          const currentIds = editor.getCurrentPageShapes().map((s) => s.id);
           if (currentIds.length > 0) editor.deleteShapes(currentIds);
           if (shapes.length > 0) {
             editor.createShapes(shapes);
+            if (bindings.length > 0) {
+              editor.createBindings(bindings);
+            }
             editor.zoomToFit({ animation: { duration: 250 } });
           }
-          // Keep editable so users can drag components around
           editor.updateInstanceState({ isReadonly: false });
         },
         { history: "ignore" },
       );
+    } catch (err) {
+      console.error("Error updating canvas shapes:", err);
     }
-  }, [shapes, batchProcessShapes, isRendering]);
+  }, [shapes, bindings]);
 
   return (
     <div
       className="canvas-shell"
       style={{ width: "100%", height: "100%", minHeight: "500px" }}
     >
-      {true ? (
+      <CanvasErrorBoundary>
         <Tldraw
           onMount={(editor) => {
             editorRef.current = editor;
             if (shapes.length > 0) {
-              editor.createShapes(shapes);
-              editor.zoomToFit();
+              try {
+                editor.createShapes(shapes);
+                if (bindings.length > 0) {
+                  editor.createBindings(bindings);
+                }
+                editor.zoomToFit();
+              } catch (err) {
+                console.error("Error in onMount:", err);
+              }
             }
-            // Allow dragging by default
           }}
         />
-      ) : (
-        <FallbackCanvas canvas={canvas} />
-      )}
+      </CanvasErrorBoundary>
     </div>
   );
 }

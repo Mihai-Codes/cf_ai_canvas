@@ -31,6 +31,7 @@ type PlannedElement = {
   height?: number;
   text?: string;
   color?: string;
+  fill?: string;
   startBoundTo?: string;
   endBoundTo?: string;
 };
@@ -335,6 +336,7 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     height?: number;
     text?: string;
     color?: string;
+    fill?: string;
     startBoundTo?: string;
     endBoundTo?: string;
   }): CanvasElement {
@@ -349,7 +351,7 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
       height: input.height ?? 100,
       text: input.text,
       color: (input.color as CanvasElement["color"]) ?? "black",
-      fill: "none",
+      fill: (input.fill as CanvasElement["fill"]) ?? "none",
       dash: "draw",
       size: "m",
       font: "draw",

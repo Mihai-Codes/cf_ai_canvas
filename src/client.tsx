@@ -668,7 +668,7 @@ function ChatPanel({
             disabled={!connected || isBusy}
             title="Attach image for multimodal analysis"
           >
-            📎 Attach Image
+             Attach Image
           </button>
           {isBusy ? (
             <button type="button" onClick={stop}>

@@ -58,16 +58,16 @@ Named snapshots"]
 
 ## Multimodal Diagram Generation
 
-### 🎉 Advanced Features
+###  Advanced Features
 
 The system now supports **multimodal input** combining images and text:
 
-- **📎 Image Upload**: Attach diagram sketches or screenshots
+- ** Image Upload**: Attach diagram sketches or screenshots
 - **🤖 AI Analysis**: Llama 3.2 Vision extracts structure from images
 - **📝 Text Enhancement**: Combine image analysis with text prompts
 - **🎨 Diagram Generation**: Llama 3.3 creates tldraw-compatible shapes
 
-### 📋 Usage Examples
+###  Usage Examples
 
 **Text-only mode:**
 ```
@@ -75,12 +75,12 @@ The system now supports **multimodal input** combining images and text:
 ```
 
 **Multimodal mode:**
-1. Click 📎 Attach Image
+1. Click  Attach Image
 2. Upload a hand-drawn architecture sketch
 3. Add prompt: "Clean up this diagram and add proper labels"
 4. Get a structured, professional diagram
 
-### ⚠️ Current Limitations
+###  Current Limitations
 
 See [MODEL_LIMITATIONS.md](MODEL_LIMITATIONS.md) for detailed explanation of:
 - Llama 3.3's spatial reasoning constraints

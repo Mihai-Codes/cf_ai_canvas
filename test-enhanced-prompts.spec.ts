@@ -101,7 +101,7 @@ test.describe('Enhanced Prompt Engineering', () => {
     await page.waitForSelector('.chat-panel', { timeout: 10000 });
 
     // Verify attach image button exists and is enabled
-    const attachButton = page.locator('button:has-text("📎 Attach Image")');
+    const attachButton = page.locator('button:has-text(" Attach Image")');
     await expect(attachButton).toBeVisible();
     await expect(attachButton).toBeEnabled();
     

@@ -4,26 +4,26 @@
 
 This document explains the current capabilities and limitations of the diagram generation system using Cloudflare Workers AI models.
 
-## 🎯 What Works Perfectly
+##  What Works Perfectly
 
 ### 1. Cloudflare-Native Multimodal Pipeline
-- ✅ **Llama 3.2 Vision**: Successfully analyzes uploaded images
-- ✅ **Llama 3.3**: Generates tldraw-compatible JSON structures
-- ✅ **Dual-Model Coordination**: Seamless integration between vision and text models
-- ✅ **Real-time Processing**: Fast response times via Workers AI
+-  **Llama 3.2 Vision**: Successfully analyzes uploaded images
+-  **Llama 3.3**: Generates tldraw-compatible JSON structures
+-  **Dual-Model Coordination**: Seamless integration between vision and text models
+-  **Real-time Processing**: Fast response times via Workers AI
 
 ### 2. User Interface
-- ✅ **Image Upload**: 📎 Attach Image button works correctly
-- ✅ **Text Prompts**: All quick prompts and custom inputs work
-- ✅ **Canvas Rendering**: Diagrams appear correctly in tldraw
+-  **Image Upload**:  Attach Image button works correctly
+-  **Text Prompts**: All quick prompts and custom inputs work
+-  **Canvas Rendering**: Diagrams appear correctly in tldraw
 
 ### 3. Architecture
-- ✅ **Durable Objects**: Proper state management
-- ✅ **KV Storage**: Persistent session data
-- ✅ **WebSocket Communication**: Real-time updates
-- ✅ **Type Safety**: Full TypeScript implementation
+-  **Durable Objects**: Proper state management
+-  **KV Storage**: Persistent session data
+-  **WebSocket Communication**: Real-time updates
+-  **Type Safety**: Full TypeScript implementation
 
-## ⚠️ Known Limitations
+##  Known Limitations
 
 ### 1. Spatial Reasoning Constraints
 
@@ -55,8 +55,8 @@ The LLM doesn't "see" the spatial relationship between x=100,y=100 and x=400,y=1
 
 | Model | Spatial Reasoning | Available on Workers AI | Notes |
 |-------|------------------|------------------------|-------|
-| Llama 3.3 | ⭐ Limited | ✅ Yes | Our current model |
-| Llama 3.2 Vision | ⭐⭐ Image understanding | ✅ Yes | Used for image analysis |
+| Llama 3.3 | ⭐ Limited |  Yes | Our current model |
+| Llama 3.2 Vision | ⭐⭐ Image understanding |  Yes | Used for image analysis |
 | Gemini 1.5 Pro | ⭐⭐⭐⭐⭐ Advanced | ❌ No | Google's specialized model |
 | Claude 3.5 Sonnet | ⭐⭐⭐⭐⭐ Advanced | ❌ No | Anthropic's specialized model |
 
@@ -318,14 +318,14 @@ const planner = await generateText({
 });
 ```
 
-## 📚 References
+##  References
 
 - [Cloudflare Workers AI Documentation](https://developers.cloudflare.com/workers-ai/)
 - [Llama 3.3 Model Card](https://developers.cloudflare.com/workers-ai/models/llama-3-3/)
 - [Llama 3.2 Vision Model Card](https://developers.cloudflare.com/workers-ai/models/llama-3-2-vision/)
 - [Understanding LLM Limitations in Spatial Tasks](https://arxiv.org/abs/2308.07922)
 
-## 🎓 Key Takeaways
+##  Key Takeaways
 
 1. **Current system works as designed** within LLM constraints
 2. **Multimodal pipeline is innovative** and shows advanced Workers AI usage

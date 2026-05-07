@@ -11,7 +11,7 @@ test.describe('Multimodal Diagram Generation', () => {
     // Test the UI elements exist and basic functionality
     
     // For now, let's test the UI elements exist
-    const attachButton = page.locator('button:has-text("📎 Attach Image")');
+    const attachButton = page.locator('button:has-text(" Attach Image")');
     await expect(attachButton).toBeVisible();
     
     const textarea = page.locator('textarea[placeholder="Draw a microservices diagram..."]');
@@ -40,7 +40,7 @@ test.describe('Multimodal Diagram Generation', () => {
     await page.goto('https://cf-ai-canvas.mc146.workers.dev');
     await page.waitForSelector('.chat-panel');
     
-    const attachButton = page.locator('button:has-text("📎 Attach Image")');
+    const attachButton = page.locator('button:has-text(" Attach Image")');
     await expect(attachButton).toBeVisible();
     await expect(attachButton).toBeEnabled();
   });

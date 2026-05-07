@@ -95,6 +95,67 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
     });
   }
 
+  // Enhanced prompt engineering to improve diagram complexity
+  private enhancePrompt(prompt: string, addStructure: boolean = true): string {
+    // Detect prompt complexity and add structural guidance
+    const lowerPrompt = prompt.toLowerCase();
+    
+    // Base enhancement with spatial reasoning guidance
+    let enhanced = `${prompt}\n\n`;
+    
+    if (addStructure) {
+      enhanced += `DIAGRAM STRUCTURE GUIDANCE:\n`;
+      
+      // Add layout patterns based on prompt content
+      if (lowerPrompt.includes('architecture') || lowerPrompt.includes('layers') || lowerPrompt.includes('tier')) {
+        enhanced += `- Use hierarchical layout (top to bottom or left to right)\n`;
+        enhanced += `- Group related components in visual layers\n`;
+        enhanced += `- Maintain consistent vertical/horizontal alignment\n`;
+      }
+      
+      if (lowerPrompt.includes('flow') || lowerPrompt.includes('process') || lowerPrompt.includes('steps')) {
+        enhanced += `- Arrange steps in sequential order\n`;
+        enhanced += `- Use equal spacing between elements (200-300px recommended)\n`;
+        enhanced += `- Connect elements with directed arrows\n`;
+      }
+      
+      if (lowerPrompt.includes('network') || lowerPrompt.includes('cloud') || lowerPrompt.includes('infrastructure')) {
+        enhanced += `- Place edge services (CDN, WAF) at the top\n`;
+        enhanced += `- Position core services in the middle layer\n`;
+        enhanced += `- Show data flow direction with arrow heads\n`;
+      }
+      
+      // Always add these spatial constraints
+      enhanced += `SPATIAL CONSTRAINTS:\n`;
+      enhanced += `- No overlapping elements\n`;
+      enhanced += `- Minimum 50px padding between components\n`;
+      enhanced += `- Use grid-aligned positions (multiples of 100 recommended)\n`;
+      enhanced += `- Keep connection lines straight and uncrossed when possible\n`;
+      
+      // Add visual hierarchy guidance
+      enhanced += `VISUAL HIERARCHY:\n`;
+      enhanced += `- Use different shapes: rectangles for services, diamonds for decisions, ellipses for start/end\n`;
+      enhanced += `- Color coding: blue for primary path, green for success, red for errors, gray for secondary\n`;
+      enhanced += `- Size hierarchy: important components can be 20-30% larger\n`;
+      
+      // Add specific coordinate examples
+      enhanced += `COORDINATE EXAMPLES:\n`;
+      enhanced += `- Column layout: x=100, x=400, x=700 (300px columns + 100px gutters)\n`;
+      enhanced += `- Row layout: y=100, y=300, y=500 (200px rows + 100px gutters)\n`;
+      enhanced += `- Grid layout: combine x and y patterns above\n`;
+    }
+    
+    // Add output format constraints
+    enhanced += `\nOUTPUT REQUIREMENTS:\n`;
+    enhanced += `- Generate 4-12 elements for most diagrams\n`;
+    enhanced += `- Ensure all elements have valid x, y, width, height properties\n`;
+    enhanced += `- Use consistent shape types and colors\n`;
+    enhanced += `- Include clear, concise labels (max 20 characters)\n`;
+    enhanced += `- Connect related elements with arrows\n`;
+    
+    return enhanced;
+  }
+
   private getLastUserMessage(): { text: string; hasImage: boolean; imageData?: string } {
     for (let index = this.messages.length - 1; index >= 0; index--) {
       const message = this.messages[index] as any;
@@ -169,7 +230,8 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
     const workersai = createWorkersAI({ binding: this.env.AI });
     const { text: userPrompt, hasImage, imageData } = this.getLastUserMessage();
 
-    let enhancedPrompt = userPrompt;
+    let enhancedPrompt = this.enhancePrompt(userPrompt, hasImage);
+    
     if (hasImage && imageData) {
       // Use Llama 3.2 Vision to analyze the image and extract structure
       const visionModel = workersai("@cf/meta/llama-3.2-11b-vision-instruct-fp8");
@@ -177,20 +239,32 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
         model: visionModel,
         system: `You are an expert at analyzing visual diagrams and extracting their structure. 
         Describe the diagram in clear, structured text that can be used to recreate it. 
-        Include all nodes, connections, labels, and spatial relationships.`,
+        Include all nodes, connections, labels, and spatial relationships. 
+        Output format: 
+        Nodes: [node1: type, position, size], [node2: ...]
+        Connections: [source -> target: type, label]
+        Layout: [orientation, spacing, alignment]`,
         prompt: `Analyze this diagram image and describe its structure in detail. User request: ${userPrompt}`,
       });
-      enhancedPrompt = `User prompt: ${userPrompt}\n\nImage analysis: ${visionResponse.text}`;
+      enhancedPrompt = `User prompt: ${userPrompt}\n\nImage analysis: ${visionResponse.text}\n\nStructured requirements: ${this.enhancePrompt(visionResponse.text, false)}`;
     }
 
     const planner = await generateText({
       model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
-      system: `You convert user requests into tldraw canvas JSON. 
-      If the user provided an image analysis, use it to guide your layout.
+      system: `You are an expert diagram generation assistant with advanced spatial reasoning capabilities. 
+      Convert user requests into professionally structured tldraw canvas JSON. 
+      If the user provided image analysis, use it to guide your layout.
 
-Return only valid JSON with this exact shape:
+CRITICAL SPATIAL RULES:
+1. NO OVERLAPPING ELEMENTS - calculate positions to ensure minimum 50px padding
+2. GRID ALIGNMENT - use x,y coordinates that are multiples of 100 for clean layouts
+3. CONSISTENT SPACING - maintain equal gaps between related elements
+4. LOGICAL FLOW - arrange elements to match the described workflow direction
+
+STRUCTURED OUTPUT REQUIREMENTS:
+Return ONLY valid JSON with this exact shape:
 {
-  "summary": "one short sentence describing what you created",
+  "summary": "concise description of the created diagram",
   "elements": [
     {
       "type": "rectangle | ellipse | diamond | triangle | text | arrow | line | note | frame | star | cloud | hexagon",
@@ -198,13 +272,29 @@ Return only valid JSON with this exact shape:
       "y": 100,
       "width": 180,
       "height": 80,
-      "text": "label",
+      "text": "clear label under 20 chars",
       "color": "black | grey | blue | light-blue | violet | light-violet | red | light-red | orange | yellow | green | light-green | white"
     }
   ]
 }
 
-Create 4 to 12 elements for most diagrams. Use rectangles for steps, diamonds for decisions, arrows between steps, and clear labels. Use positions that do not overlap. Do not include markdown.`,
+DIAGRAM GENERATION GUIDELINES:
+- Create 4-12 elements for most diagrams (target 6-8 for complexity balance)
+- Use appropriate shapes: rectangles for components, diamonds for decisions, ellipses for start/end
+- Implement color coding: blue=primary, green=success, red=errors, grey=secondary
+- Connect related elements with arrows (solid for main flow, dashed for optional)
+- Arrange in logical layouts: left-to-right for flows, top-to-bottom for hierarchies
+- Ensure all text labels fit within their containers (adjust widths if needed)
+- Avoid crossed connection lines when possible
+- Use frames to group related components
+
+SPATIAL CALCULATION EXAMPLES:
+- 2-column layout: x=150 and x=550 (400px width + 100px gutter)
+- 3-column layout: x=100, x=400, x=700 (300px columns + 100px gutters)
+- Row spacing: y=100, y=300, y=500 (200px height + 100px gutters)
+- Decision branches: place alternatives below with clear arrow paths
+
+Do not include markdown. Focus on creating clean, professional, non-overlapping layouts.`,
       prompt: enhancedPrompt,
     });
 

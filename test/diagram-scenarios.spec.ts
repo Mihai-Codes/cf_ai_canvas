@@ -21,11 +21,11 @@ const APP = "https://cf-ai-canvas.mc146.workers.dev";
  * test never breaks due to network issues.
  */
 async function fetchDiagramImage(destPath: string): Promise<void> {
-  // A publicly licensed software architecture diagram from Wikimedia Commons
+  // A real diagram-style image from the Cloudflare blog (public, stable)
+  // We use any recognisable image; vision model will describe what it sees
+  // and the planner will turn that into a diagram.
   const DIAGRAM_URL =
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/" +
-    "Developer_portal_architecture_simple.png/" +
-    "640px-Developer_portal_architecture_simple.png";
+    "https://blog.cloudflare.com/content/images/2023/09/image1-14.png";
 
   try {
     const res = await fetch(DIAGRAM_URL, { signal: AbortSignal.timeout(8000) });

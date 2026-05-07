@@ -6,3 +6,4 @@ dist/
 *.local
 env.d.ts
 worker-configuration.d.ts
+\n# Playwright\ntest-results/\nplaywright-report/

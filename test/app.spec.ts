@@ -143,6 +143,18 @@ test.describe('cf_ai_canvas Application Tests', () => {
     
     await page.screenshot({ path: 'test-results/complex-architecture.png', fullPage: true });
   });
+
+  test('should show image attachment button', async ({ page }) => {
+    const attachButton = page.locator('button[title="Attach image for multimodal analysis"]');
+    await expect(attachButton).toBeVisible();
+    await expect(attachButton).toHaveText('Attach Image');
+  });
+
+  test('should have hidden file input for image upload', async ({ page }) => {
+    const fileInput = page.locator('input[type="file"][id="image-upload"]');
+    await expect(fileInput).toBeAttached();
+    expect(await fileInput.getAttribute('accept')).toBe('image/*');
+  });
 });
 
 test.describe('MCP Endpoint Tests', () => {

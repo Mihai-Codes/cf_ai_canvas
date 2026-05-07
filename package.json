@@ -29,8 +29,10 @@
     "@modelcontextprotocol/sdk": "^1.12.1",
     "agents": "^0.12.3",
     "ai": "^6.0.174",
+    "i18next": "^26.0.9",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-i18next": "^17.0.6",
     "tldraw": "^5.0.0",
     "workers-ai-provider": "^3.1.13",
     "zod": "^4.4.2"

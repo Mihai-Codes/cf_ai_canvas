@@ -1,0 +1,22 @@
+{
+  "appTitle": "cf_ai_canvas",
+  "defaultSession": "Default session",
+  "liveCanvas": "Live Canvas",
+  "elementsCount": "{{count}} elements",
+  "mcpEndpoint": "/mcp",
+  "quickPrompts": {
+    "loginFlow": "Draw a login flow with success and error paths",
+    "architecture": "Create a Cloudflare Workers AI architecture diagram",
+    "oauthFlow": "Draw a 4-step MCP OAuth flow"
+  },
+  "chatPlaceholder": "Draw a microservices diagram...",
+  "clearChat": "Clear chat",
+  "resetCanvas": "Reset canvas",
+  "send": "Send",
+  "stop": "Stop",
+  "connected": "connected",
+  "offline": "offline",
+  "noMessages": "No messages yet.",
+  "noElements": "No canvas elements yet.",
+  "readOnlyRenderer": "Read-only renderer. Add VITE_TLDRAW_LICENSE_KEY to enable the production tldraw editor."
+}

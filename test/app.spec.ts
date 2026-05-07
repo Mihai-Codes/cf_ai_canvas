@@ -78,6 +78,40 @@ test.describe('cf_ai_canvas Application Tests', () => {
     
     await page.screenshot({ path: 'test-results/architecture-diagram.png', fullPage: true });
   });
+
+  test('should be responsive on mobile devices', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.reload();
+    
+    await expect(page.locator('.app')).toBeVisible();
+    await expect(page.locator('.chat-panel')).toBeVisible();
+    await expect(page.locator('.canvas-panel')).toBeVisible();
+    
+    const chatPanel = page.locator('.chat-panel');
+    const canvasPanel = page.locator('.canvas-panel');
+    
+    const chatWidth = await chatPanel.evaluate(node => node.getBoundingClientRect().width);
+    const canvasWidth = await canvasPanel.evaluate(node => node.getBoundingClientRect().width);
+    
+    expect(chatWidth).toBeGreaterThan(300);
+    expect(canvasWidth).toBeGreaterThan(300);
+    
+    await page.screenshot({ path: 'test-results/mobile-responsive.png', fullPage: true });
+  });
+
+  test('should handle large diagrams efficiently', async ({ page }) => {
+    const textarea = page.locator('textarea[placeholder="Draw a microservices diagram..."]');
+    await textarea.fill('Create a complex system with 20 components including databases, APIs, frontend services, authentication, caching, message queues, monitoring, logging, CDN, load balancers, and multiple microservices');
+    
+    const sendButton = page.locator('button:has-text("Send")');
+    await sendButton.click();
+    
+    await page.waitForTimeout(10000);
+    
+    await expect(page.locator('.canvas-panel')).toBeVisible();
+    
+    await page.screenshot({ path: 'test-results/large-diagram.png', fullPage: true });
+  });
 });
 
 test.describe('MCP Endpoint Tests', () => {

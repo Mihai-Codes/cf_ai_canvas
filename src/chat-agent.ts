@@ -424,45 +424,60 @@ Do not include markdown, explanations, or code comments.`,
   private fixLayoutOverlaps(elements: PlannedElement[]): PlannedElement[] {
     const GRID_SIZE = 120;
     const MIN_SPACING = 40;
+    const REPULSION_FORCE = 0.1;
+    const MAX_ITERATIONS = 50;
     
-    const placed: PlannedElement[] = [];
-    const grid: Record<string, boolean> = {};
+    if (elements.length <= 1) return [...elements];
     
-    for (const element of elements) {
-      const originalX = element.x ?? 100;
-      const originalY = element.y ?? 100;
+    const nodes = elements.map((element, index) => ({
+      ...element,
+      id: index,
+      x: element.x ?? 100,
+      y: element.y ?? 100,
+      vx: 0,
+      vy: 0,
+    }));
+    
+    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+      nodes.forEach((node) => {
+        node.vx = 0;
+        node.vy = 0;
+      });
       
-      let x = originalX;
-      let y = originalY;
-      let attempts = 0;
-      const maxAttempts = 20;
+      nodes.forEach((nodeA, i) => {
+        nodes.forEach((nodeB, j) => {
+          if (i === j) return;
+          
+          const dx = nodeB.x - nodeA.x;
+          const dy = nodeB.y - nodeA.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance < MIN_SPACING) {
+            const force = REPULSION_FORCE / (distance * distance);
+            nodeA.vx -= dx * force;
+            nodeA.vy -= dy * force;
+            nodeB.vx += dx * force;
+            nodeB.vy += dy * force;
+          }
+        });
+      });
       
-      while (attempts < maxAttempts) {
-        const gridX = Math.round(x / GRID_SIZE);
-        const gridY = Math.round(y / GRID_SIZE);
-        const gridKey = `${gridX}:${gridY}`;
+      let totalMovement = 0;
+      nodes.forEach((node) => {
+        const movement = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
+        totalMovement += movement;
         
-        if (!grid[gridKey]) {
-          grid[gridKey] = true;
-          placed.push({ ...element, x, y });
-          break;
-        }
+        node.x += node.vx;
+        node.y += node.vy;
         
-        x += GRID_SIZE;
-        if (x > 1200) {
-          x = Math.max(40, originalX - GRID_SIZE * (attempts % 3));
-          y += GRID_SIZE;
-        }
-        
-        attempts++;
-      }
+        node.x = Math.max(20, Math.min(1500, node.x));
+        node.y = Math.max(20, Math.min(1500, node.y));
+      });
       
-      if (attempts >= maxAttempts && !placed.find(e => e === element)) {
-        placed.push(element);
-      }
+      if (totalMovement < 0.1) break;
     }
     
-    return placed;
+    return nodes.map(({ x, y, ...rest }) => ({ ...rest, x, y }));
   }
 
   private applyPlan(plan: DiagramPlan) {

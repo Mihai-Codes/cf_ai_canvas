@@ -3,6 +3,8 @@ import "tldraw/tldraw.css";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import i18n from "i18next";
+import { initReactI18next, useTranslation } from "react-i18next";
 import { useAgent } from "agents/react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { toRichText } from "@tldraw/editor";
@@ -365,7 +367,7 @@ function FallbackCanvas({ canvas }: { canvas?: CanvasState }) {
   const elements = Object.values(canvas?.elements ?? {});
   if (elements.length === 0) {
     return (
-      <div className="fallback-empty">
+      <div className="fallback-empty" role="status" aria-live="polite">
         <p>No canvas elements yet.</p>
       </div>
     );
@@ -394,8 +396,9 @@ function FallbackCanvas({ canvas }: { canvas?: CanvasState }) {
   ].join(" ");
 
   return (
-    <div className="fallback-canvas" aria-label="Read-only generated canvas">
-      <svg viewBox={viewBox} role="img" aria-label="Generated diagram">
+    <div className="fallback-canvas" aria-label="Read-only generated canvas" role="region" aria-labelledby="canvas-heading">
+      <h2 id="canvas-heading" className="sr-only">Generated Diagram</h2>
+      <svg viewBox={viewBox} role="img" aria-label="Generated diagram" focusable="false">
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
@@ -415,37 +418,74 @@ function FallbackCanvas({ canvas }: { canvas?: CanvasState }) {
 function CanvasView({ canvas }: { canvas?: CanvasState }) {
   const editorRef = useRef<Editor | null>(null);
   const lastHashRef = useRef("");
+  const [isRendering, setIsRendering] = useState(false);
 
   const shapes = useMemo(() => {
     return Object.values(canvas?.elements ?? {}).map(toTldrawShape);
   }, [canvas?.elements]);
 
+  const batchProcessShapes = useCallback((shapes: TLCreateShapePartial[], batchSize = 20) => {
+    const batches: TLCreateShapePartial[][] = [];
+    for (let i = 0; i < shapes.length; i += batchSize) {
+      batches.push(shapes.slice(i, i + batchSize));
+    }
+    return batches;
+  }, []);
+
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor) return;
+    if (!editor || isRendering) return;
 
     const nextHash = JSON.stringify(shapes);
     if (nextHash === lastHashRef.current) return;
     lastHashRef.current = nextHash;
 
-    editor.run(
-      () => {
-        editor.updateInstanceState({ isReadonly: false });
-        const currentIds = editor
-          .getCurrentPageShapes()
-          .filter((shape) => shape.id.startsWith("shape:"))
-          .map((shape) => shape.id);
+    if (shapes.length > 50) {
+      setIsRendering(true);
+      const batches = batchProcessShapes(shapes);
+      
+      editor.run(
+        () => {
+          editor.updateInstanceState({ isReadonly: false });
+          const currentIds = editor
+            .getCurrentPageShapes()
+            .filter((shape) => shape.id.startsWith("shape:"))
+            .map((shape) => shape.id);
 
-        if (currentIds.length > 0) editor.deleteShapes(currentIds);
-        if (shapes.length > 0) {
-          editor.createShapes(shapes);
+          if (currentIds.length > 0) editor.deleteShapes(currentIds);
+          
+          batches.forEach(batch => {
+            if (batch.length > 0) {
+              editor.createShapes(batch);
+            }
+          });
+          
           editor.zoomToFit({ animation: { duration: 250 } });
-        }
-        editor.updateInstanceState({ isReadonly: true });
-      },
-      { history: "ignore" },
-    );
-  }, [shapes]);
+          editor.updateInstanceState({ isReadonly: true });
+          setIsRendering(false);
+        },
+        { history: "ignore" },
+      );
+    } else {
+      editor.run(
+        () => {
+          editor.updateInstanceState({ isReadonly: false });
+          const currentIds = editor
+            .getCurrentPageShapes()
+            .filter((shape) => shape.id.startsWith("shape:"))
+            .map((shape) => shape.id);
+
+          if (currentIds.length > 0) editor.deleteShapes(currentIds);
+          if (shapes.length > 0) {
+            editor.createShapes(shapes);
+            editor.zoomToFit({ animation: { duration: 250 } });
+          }
+          editor.updateInstanceState({ isReadonly: true });
+        },
+        { history: "ignore" },
+      );
+    }
+  }, [shapes, batchProcessShapes, isRendering]);
 
   return (
     <div className="canvas-shell">
@@ -643,5 +683,23 @@ function App() {
     </main>
   );
 }
+
+i18n
+  .use(initReactI18next)
+  .init({
+    lng: navigator.language.split('-')[0] || 'en',
+    fallbackLng: 'en',
+    interpolation: {
+      escapeValue: false,
+    },
+    resources: {
+      en: {
+        translation: require('../public/locales/en/translation.json'),
+      },
+      ro: {
+        translation: require('../public/locales/ro/translation.json'),
+      },
+    },
+  });
 
 createRoot(document.getElementById("root")!).render(<App />);

@@ -29,6 +29,48 @@ textarea {
   overflow: hidden;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  
+  .chat-panel {
+    min-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #dbe3ef;
+  }
+  
+  .canvas-panel {
+    min-height: 500px;
+  }
+  
+  .quick-prompts {
+    flex-wrap: wrap;
+  }
+  
+  .quick-prompts button {
+    flex: 1 1 45%;
+    margin: 4px;
+  }
+  
+  .composer textarea {
+    min-height: 100px;
+  }
+}
+
 .chat-panel {
   display: flex;
   min-width: 0;

@@ -1,0 +1,22 @@
+{
+  "appTitle": "cf_ai_canvas",
+  "defaultSession": "Sesiune implicită",
+  "liveCanvas": "Canvas Live",
+  "elementsCount": "{{count}} elemente",
+  "mcpEndpoint": "/mcp",
+  "quickPrompts": {
+    "loginFlow": "Desenează un flux de autentificare cu căi de succes și eroare",
+    "architecture": "Creează o diagramă de arhitectură Cloudflare Workers AI",
+    "oauthFlow": "Desenează un flux OAuth MCP în 4 pași"
+  },
+  "chatPlaceholder": "Desenează o diagramă de microservicii...",
+  "clearChat": "Șterge conversația",
+  "resetCanvas": "Resetează canvas-ul",
+  "send": "Trimite",
+  "stop": "Oprește",
+  "connected": "conectat",
+  "offline": "deconectat",
+  "noMessages": "Niciun mesaj încă.",
+  "noElements": "Niciun element pe canvas încă.",
+  "readOnlyRenderer": "Renderer doar pentru citire. Adaugă VITE_TLDRAW_LICENSE_KEY pentru a activa editorul tldraw de producție."
+}

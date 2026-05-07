@@ -21,7 +21,7 @@ const TINY_PNG_BASE64 =
   "+M9Qz0AEYBxVSF+FABJADveax3/VAAAAAElFTkSuQmCC";
 
 function screenshotPath(name: string) {
-  const dir = path.join(__dirname, "..", "test-results");
+  const dir = path.join(process.cwd(), "test-results");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return path.join(dir, `${name}.png`);
 }
@@ -29,9 +29,10 @@ function screenshotPath(name: string) {
 /** Wait until the WebSocket is connected and the status indicator says "connected". */
 async function waitForConnection(page: Page, timeout = 20_000) {
   await page.waitForSelector('[data-testid="connection-status"]', { timeout });
-  await expect(
-    page.locator('[data-testid="connection-status"]')
-  ).toHaveText("connected", { timeout });
+  await expect(page.locator('[data-testid="connection-status"]')).toHaveText(
+    "connected",
+    { timeout },
+  );
 }
 
 /**
@@ -47,7 +48,7 @@ async function waitForElements(page: Page, minCount = 1, timeout = 90_000) {
       return match ? parseInt(match[1], 10) >= min : false;
     },
     minCount,
-    { timeout }
+    { timeout },
   );
 }
 
@@ -97,7 +98,10 @@ test.describe("Diagram generation — all three input paths", () => {
     const count = await getElementCount(page);
     console.log(`[quick-prompt] got ${count} elements`);
 
-    await page.screenshot({ path: screenshotPath("01-quick-login-flow"), fullPage: true });
+    await page.screenshot({
+      path: screenshotPath("01-quick-login-flow"),
+      fullPage: true,
+    });
 
     expect(count).toBeGreaterThanOrEqual(3);
 
@@ -169,7 +173,9 @@ test.describe("Diagram generation — all three input paths", () => {
     await resetCanvas(page);
 
     const input = page.locator('[data-testid="chat-input"]');
-    await input.fill("Draw a microservices architecture with API gateway, auth service, user service, order service, and database");
+    await input.fill(
+      "Draw a microservices architecture with API gateway, auth service, user service, order service, and database",
+    );
 
     const sendBtn = page.locator('button[type="submit"]');
     await sendBtn.click();
@@ -193,7 +199,7 @@ test.describe("Diagram generation — all three input paths", () => {
 
     const input = page.locator('[data-testid="chat-input"]');
     await input.fill(
-      "Create a data pipeline diagram with source, ingestion, transformation, warehouse, and error handling"
+      "Create a data pipeline diagram with source, ingestion, transformation, warehouse, and error handling",
     );
 
     await page.locator('button[type="submit"]').click();
@@ -220,7 +226,7 @@ test.describe("Diagram generation — all three input paths", () => {
     await resetCanvas(page);
 
     // Write the tiny test PNG to disk so Playwright can upload it
-    const imgPath = path.join(__dirname, "..", "test-results", "test-input.png");
+    const imgPath = path.join(process.cwd(), "test-results", "test-input.png");
     fs.writeFileSync(imgPath, Buffer.from(TINY_PNG_BASE64, "base64"));
 
     // Set the file input
@@ -232,7 +238,7 @@ test.describe("Diagram generation — all three input paths", () => {
     const gotShapes = await Promise.race([
       waitForElements(page, 1, 90_000).then(() => true),
       page
-        .waitForSelector('.message.assistant', { timeout: 90_000 })
+        .waitForSelector(".message.assistant", { timeout: 90_000 })
         .then(() => false),
     ]);
 
@@ -248,7 +254,9 @@ test.describe("Diagram generation — all three input paths", () => {
     } else {
       // Vision unavailable — verify a clear assistant message was shown, not silence
       const msgs = await page.locator(".message.assistant").allTextContents();
-      console.log(`[image-prompt] text-only fallback messages: ${msgs.join(" | ")}`);
+      console.log(
+        `[image-prompt] text-only fallback messages: ${msgs.join(" | ")}`,
+      );
       // At least one assistant message must exist (welcome or error message)
       expect(msgs.length).toBeGreaterThan(0);
     }

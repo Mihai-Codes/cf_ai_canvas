@@ -505,7 +505,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
 
   return (
     <div className="canvas-shell" style={{ width: '100%', height: '100%', minHeight: '500px' }}>
-      {TLDRAW_LICENSE_KEY !== false ? (
+      {true ? (
         <Tldraw
           onMount={(editor) => {
             editorRef.current = editor;

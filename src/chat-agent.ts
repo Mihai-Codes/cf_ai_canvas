@@ -6,8 +6,8 @@ import dagre from "dagre";
 import type { CanvasElement, CanvasState } from "./types";
 import { DIAGRAM_PATTERNS } from "./diagram-patterns";
 
-const RANKSEP = 30;
-const NODE_SEP = 15;
+const RANKSEP = 200;
+const NODE_SEP = 150;
 const MARGIN_X = 20;
 const MARGIN_Y = 20;
 
@@ -35,26 +35,43 @@ type PlannedElement = {
   endBoundTo?: string;
 };
 
-function computeLayout(
-  elements: SemElement[]
-): Array<{ id: string; x: number; y: number; rank: number; width: number; height: number }> {
+function computeLayout(elements: SemElement[]): Array<{
+  id: string;
+  x: number;
+  y: number;
+  rank: number;
+  width: number;
+  height: number;
+}> {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "LR", nodesep: NODE_SEP, ranksep: RANKSEP, marginx: MARGIN_X, marginy: MARGIN_Y, align: "UL", edgesep: 0 });
+  g.setGraph({
+    rankdir: "LR",
+    nodesep: NODE_SEP,
+    ranksep: RANKSEP,
+    marginx: MARGIN_X,
+    marginy: MARGIN_Y,
+    align: "UL",
+    edgesep: 0,
+  });
   g.setDefaultEdgeLabel(() => ({}));
 
   // Only non-arrow elements become nodes in the layout graph
-  const nodes = elements.filter(e => e.type !== "arrow" && e.type !== "line");
+  const nodes = elements.filter((e) => e.type !== "arrow" && e.type !== "line");
 
   // Add nodes to Dagre
-  nodes.forEach(n => {
+  nodes.forEach((n) => {
     const w = n.width ?? 120;
     const h = n.height ?? 60;
     g.setNode(n.id, { width: w, height: h });
   });
 
   // Add edges for arrow connections (note: these are NOT nodes themselves)
-  elements.forEach(e => {
-    if ((e.type === "arrow" || e.type === "line") && e.startBoundTo && e.endBoundTo) {
+  elements.forEach((e) => {
+    if (
+      (e.type === "arrow" || e.type === "line") &&
+      e.startBoundTo &&
+      e.endBoundTo
+    ) {
       g.setEdge(e.startBoundTo, e.endBoundTo);
     }
   });
@@ -62,11 +79,19 @@ function computeLayout(
   dagre.layout(g);
 
   // Return positions for nodes only
-  return nodes.map(n => {
+  return nodes.map((n) => {
     const w = n.width ?? 120;
     const h = n.height ?? 60;
     const raw = g.node(n.id) as any;
-    if (!raw) return { id: n.id, x: MARGIN_X, y: MARGIN_Y, rank: 0, width: w, height: h };
+    if (!raw)
+      return {
+        id: n.id,
+        x: MARGIN_X,
+        y: MARGIN_Y,
+        rank: 0,
+        width: w,
+        height: h,
+      };
     return {
       id: n.id,
       x: raw.x - w / 2,
@@ -88,7 +113,12 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
       const welcomeMessage = {
         id: crypto.randomUUID(),
         role: "assistant" as const,
-        parts: [{ type: "text" as const, text: "Welcome! I can help you create diagrams on the canvas. Try prompts like \"draw a login flow\" or \"create a Cloudflare architecture diagram\". You can also attach images for multimodal diagram generation." }],
+        parts: [
+          {
+            type: "text" as const,
+            text: 'Welcome! I can help you create diagrams on the canvas. Try prompts like "draw a login flow" or "create a Cloudflare architecture diagram". You can also attach images for multimodal diagram generation.',
+          },
+        ],
       };
       await this.saveMessages([welcomeMessage]);
     }
@@ -101,22 +131,27 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     });
   }
 
-  private parseAndLayout(rawText: string): { summary: string; elements: PlannedElement[] } | null {
+  private parseAndLayout(
+    rawText: string,
+  ): { summary: string; elements: PlannedElement[] } | null {
     const trimmed = rawText.trim();
     const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    const jsonText = fenced?.[1] ?? trimmed.match(/\{[\s\S]*\}/)?.[0] ?? trimmed;
+    const jsonText =
+      fenced?.[1] ?? trimmed.match(/\{[\s\S]*\}/)?.[0] ?? trimmed;
     const LLMOutputSchema = z.object({
       summary: z.string().optional(),
-      elements: z.array(z.object({
-        id: z.string().optional(),
-        type: z.string(),
-        width: z.number().optional(),
-        height: z.number().optional(),
-        text: z.string().optional(),
-        color: z.string().optional(),
-        startBoundTo: z.string().optional(),
-        endBoundTo: z.string().optional(),
-      })),
+      elements: z.array(
+        z.object({
+          id: z.string().optional(),
+          type: z.string(),
+          width: z.number().optional(),
+          height: z.number().optional(),
+          text: z.string().optional(),
+          color: z.string().optional(),
+          startBoundTo: z.string().optional(),
+          endBoundTo: z.string().optional(),
+        }),
+      ),
     });
     try {
       const parsed = LLMOutputSchema.parse(JSON.parse(jsonText));
@@ -144,10 +179,10 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
       }
       // Compute layout positions for nodes only
       const positions = computeLayout(semElements);
-      const posMap = new Map(positions.map(p => [p.id, p]));
+      const posMap = new Map(positions.map((p) => [p.id, p]));
       // Merge positions for nodes, and assign placeholder positions for arrows
       const planned: PlannedElement[] = [
-        ...semElements.map(sem => {
+        ...semElements.map((sem) => {
           const pos = posMap.get(sem.id)!;
           return {
             id: sem.id,
@@ -162,7 +197,7 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
             endBoundTo: sem.endBoundTo,
           };
         }),
-        ...arrowElements.map(arrow => {
+        ...arrowElements.map((arrow) => {
           // For arrows, try to compute midpoint between connected nodes as initial position
           const startId = arrow.startBoundTo;
           const endId = arrow.endBoundTo;
@@ -192,30 +227,47 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     } catch (error) {
       console.error("Failed to parse/layout diagram:", error);
       return null;
-     }
-   }
+    }
+  }
 
-   private generateFallbackDiagram(userPrompt: string): { summary: string; elements: PlannedElement[] } {
+  private generateFallbackDiagram(userPrompt: string): {
+    summary: string;
+    elements: PlannedElement[];
+  } {
     const lowerPrompt = userPrompt.toLowerCase();
     let patternName = DIAGRAM_PATTERNS[0].name;
     for (const pattern of DIAGRAM_PATTERNS) {
-      if (pattern.keywords.some(keyword => lowerPrompt.includes(keyword))) {
+      if (pattern.keywords.some((keyword) => lowerPrompt.includes(keyword))) {
         patternName = pattern.name;
         break;
       }
     }
-    if (lowerPrompt.includes("login") || lowerPrompt.includes("auth") || lowerPrompt.includes("sign")) {
+    if (
+      lowerPrompt.includes("login") ||
+      lowerPrompt.includes("auth") ||
+      lowerPrompt.includes("sign")
+    ) {
       patternName = "login_flow";
-    } else if (lowerPrompt.includes("cloudflare") || lowerPrompt.includes("architecture")) {
+    } else if (
+      lowerPrompt.includes("cloudflare") ||
+      lowerPrompt.includes("architecture")
+    ) {
       patternName = "cloudflare_architecture";
     } else if (lowerPrompt.includes("oauth")) {
       patternName = "oauth_flow";
-    } else if (lowerPrompt.includes("microservice") || lowerPrompt.includes("service")) {
+    } else if (
+      lowerPrompt.includes("microservice") ||
+      lowerPrompt.includes("service")
+    ) {
       patternName = "microservices";
-    } else if (lowerPrompt.includes("database") || lowerPrompt.includes("storage") || lowerPrompt.includes("data")) {
+    } else if (
+      lowerPrompt.includes("database") ||
+      lowerPrompt.includes("storage") ||
+      lowerPrompt.includes("data")
+    ) {
       patternName = "data_flow";
     }
-    const pattern = DIAGRAM_PATTERNS.find(p => p.name === patternName)!;
+    const pattern = DIAGRAM_PATTERNS.find((p) => p.name === patternName)!;
     const rawElements = pattern.generate(userPrompt);
     // Convert pattern's gridCol/gridRow → semantic (no positions yet). Separate nodes and arrows.
     const nodeElements: SemElement[] = [];
@@ -241,10 +293,10 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     });
     // Compute layout for nodes only
     const positions = computeLayout(nodeElements);
-    const posMap = new Map(positions.map(p => [p.id, p]));
+    const posMap = new Map(positions.map((p) => [p.id, p]));
     // Merge node positions and compute arrow midpoints
     const planned: PlannedElement[] = [
-      ...nodeElements.map(sem => {
+      ...nodeElements.map((sem) => {
         const pos = posMap.get(sem.id)!;
         return {
           id: sem.id,
@@ -259,7 +311,7 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
           endBoundTo: sem.endBoundTo,
         };
       }),
-      ...arrowElements.map(arrow => {
+      ...arrowElements.map((arrow) => {
         const startId = arrow.startBoundTo;
         const endId = arrow.endBoundTo;
         let x = MARGIN_X;
@@ -287,10 +339,10 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     return {
       summary: `Created a ${patternName.replace(/_/g, " ")} diagram`,
       elements: planned,
-     };
-   }
+    };
+  }
 
-   private createElement(input: {
+  private createElement(input: {
     id?: string;
     type: string;
     x: number;
@@ -309,23 +361,34 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
       type: input.type as CanvasElement["type"],
       x: input.x,
       y: input.y,
-      width: input.width ?? 120,
-      height: input.height ?? 80,
+      width: input.width ?? 150,
+      height: input.height ?? 100,
       text: input.text,
       color: (input.color as CanvasElement["color"]) ?? "black",
       fill: "none",
       dash: "draw",
       size: "m",
       font: "draw",
-      start: input.startBoundTo ? { x: input.x, y: input.y, boundTo: input.startBoundTo } : undefined,
-      end: input.endBoundTo ? { x: input.x + (input.width ?? 100), y: input.y, boundTo: input.endBoundTo } : undefined,
+      start: input.startBoundTo
+        ? { x: input.x, y: input.y, boundTo: input.startBoundTo }
+        : undefined,
+      end: input.endBoundTo
+        ? {
+            x: input.x + (input.width ?? 100),
+            y: input.y,
+            boundTo: input.endBoundTo,
+          }
+        : undefined,
       createdAt: now,
       updatedAt: now,
     };
   }
 
   private updateCanvas(elements: Record<string, CanvasElement>) {
-    this.setState({ ...this.state, canvas: { ...this.state.canvas, elements } });
+    this.setState({
+      ...this.state,
+      canvas: { ...this.state.canvas, elements },
+    });
   }
 
   private enhancePrompt(prompt: string, addStructure: boolean = true): string {
@@ -334,36 +397,56 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
 
     if (addStructure) {
       enhanced += "DIAGRAM STRUCTURE GUIDANCE:\n";
-      if (lowerPrompt.includes("architecture") || lowerPrompt.includes("layers") || lowerPrompt.includes("tier")) {
+      if (
+        lowerPrompt.includes("architecture") ||
+        lowerPrompt.includes("layers") ||
+        lowerPrompt.includes("tier")
+      ) {
         enhanced += "- Use hierarchical left-to-right layout\n";
         enhanced += "- Group related components in visual layers\n";
         enhanced += "- Maintain consistent vertical/horizontal alignment\n";
       }
-      if (lowerPrompt.includes("flow") || lowerPrompt.includes("process") || lowerPrompt.includes("steps")) {
+      if (
+        lowerPrompt.includes("flow") ||
+        lowerPrompt.includes("process") ||
+        lowerPrompt.includes("steps")
+      ) {
         enhanced += "- Arrange steps in sequential order\n";
         enhanced += "- Connect elements with directed arrows\n";
       }
-      if (lowerPrompt.includes("network") || lowerPrompt.includes("cloud") || lowerPrompt.includes("infrastructure")) {
+      if (
+        lowerPrompt.includes("network") ||
+        lowerPrompt.includes("cloud") ||
+        lowerPrompt.includes("infrastructure")
+      ) {
         enhanced += "- Place edge services at the top\n";
         enhanced += "- Position core services in the middle\n";
         enhanced += "- Show data flow direction with arrow heads\n";
       }
       enhanced += "\nVISUAL HIERARCHY:\n";
-      enhanced += "- Use different shapes: rectangles for services, diamonds for decisions, ellipses for start/end\n";
-      enhanced += "- Color coding: blue=primary, green=success, red=errors, gray=secondary\n";
+      enhanced +=
+        "- Use different shapes: rectangles for services, diamonds for decisions, ellipses for start/end\n";
+      enhanced +=
+        "- Color coding: blue=primary, green=success, red=errors, gray=secondary\n";
       enhanced += "- Size hierarchy: important components can be larger\n";
     }
 
     enhanced += "\nOUTPUT REQUIREMENTS:\n";
     enhanced += "- Generate 4-12 elements for most diagrams\n";
-    enhanced += "- Ensure all elements have valid type, text, color properties\n";
-    enhanced += "- Connect elements with arrows using startBoundTo and endBoundTo IDs\n";
+    enhanced +=
+      "- Ensure all elements have valid type, text, color properties\n";
+    enhanced +=
+      "- Connect elements with arrows using startBoundTo and endBoundTo IDs\n";
     enhanced += "- Include clear, concise labels\n";
 
     return enhanced;
   }
 
-  private getLastUserMessage(): { text: string; hasImage: boolean; imageData?: string } {
+  private getLastUserMessage(): {
+    text: string;
+    hasImage: boolean;
+    imageData?: string;
+  } {
     for (let index = this.messages.length - 1; index >= 0; index--) {
       const message = this.messages[index] as any;
       if (message.role !== "user") continue;
@@ -377,10 +460,28 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
       } else if (Array.isArray(message.parts)) {
         for (const part of message.parts) {
           if (typeof part === "object" && part !== null) {
-            if ("text" in part && typeof part.text === "string") text = part.text;
-            else if ("type" in part && part.type === "image" && "data" in part) {
+            if ("text" in part && typeof part.text === "string")
+              text = part.text;
+            else if (
+              "type" in part &&
+              part.type === "image" &&
+              "data" in part
+            ) {
               hasImage = true;
               imageData = part.data;
+            }
+          }
+        }
+      }
+
+      // Also check for files (e.g., attached images)
+      if (message.files && Array.isArray(message.files)) {
+        for (const file of message.files) {
+          if (file.mediaType?.startsWith("image/")) {
+            hasImage = true;
+            imageData = file.url;
+            if (!text) {
+              text = "Image attached";
             }
           }
         }
@@ -391,7 +492,9 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     return { text: "", hasImage: false };
   }
 
-  private applyPlan(plan: { summary: string; elements: PlannedElement[] } | PlannedElement[]) {
+  private applyPlan(
+    plan: { summary: string; elements: PlannedElement[] } | PlannedElement[],
+  ) {
     const nextElements: Record<string, CanvasElement> = {};
     const elements = Array.isArray(plan) ? plan : plan.elements;
     for (const input of elements) {
@@ -408,13 +511,31 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     let enhancedPrompt = this.enhancePrompt(userPrompt, hasImage);
 
     if (hasImage && imageData) {
-      const visionModel = workersai("@cf/meta/llama-3.2-11b-vision-instruct-fp8");
-      const visionResponse = await generateText({
-        model: visionModel,
-        system: "You are an expert at analyzing visual diagrams and extracting their structure.",
-        prompt: `Analyze this diagram image and describe its structure in detail. User request: ${userPrompt}`,
-      });
-      enhancedPrompt = `User prompt: ${userPrompt}\n\nImage analysis: ${visionResponse.text}\n\n${this.enhancePrompt(visionResponse.text, false)}`;
+      try {
+        const b64 = imageData.split(",")[1];
+        const visionResponse = await this.env.AI.run(
+          "@cf/meta/llama-3.2-11b-vision-instruct",
+          {
+            prompt: `Analyze this diagram image and describe its structure in detail. User request: ${userPrompt}`,
+            image_b64: b64,
+          },
+        );
+        enhancedPrompt = `User prompt: ${userPrompt}\n\nImage analysis: ${visionResponse.result.response}\n\n${this.enhancePrompt(visionResponse.result.response, false)}`;
+      } catch (error) {
+        // Vision unavailable, show message
+        const errorMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant" as const,
+          parts: [
+            {
+              type: "text" as const,
+              text: "Image analysis is currently unavailable. Please try text-only diagram generation.",
+            },
+          ],
+        };
+        await this.saveMessages([errorMessage]);
+        return;
+      }
     }
 
     const planner = await generateText({
@@ -460,12 +581,15 @@ Do not include markdown. Focus on creating clean, professional diagrams.`,
 
     const parsedPlan = this.parseAndLayout(planner.text);
     const plan = parsedPlan ?? this.generateFallbackDiagram(userPrompt);
-    const summary = parsedPlan ? parsedPlan.summary : "Created a diagram on the canvas.";
+    const summary = parsedPlan
+      ? parsedPlan.summary
+      : "Created a diagram on the canvas.";
     this.applyPlan(plan);
 
     const result = streamText({
       model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
-      system: "You are a concise canvas assistant. The canvas has already been updated. Reply in one short sentence with what was created. Do not include JSON or code.",
+      system:
+        "You are a concise canvas assistant. The canvas has already been updated. Reply in one short sentence with what was created. Do not include JSON or code.",
       prompt: `Canvas update summary: ${summary}.`,
       onFinish,
     });

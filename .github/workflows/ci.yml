@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   verify:
     name: Typecheck and build
@@ -17,23 +20,15 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Worker types
-        run: npm run types
-
-      - name: Typecheck
-        run: npm run lint
+      - run: npm ci
+      - run: npm run types
+      - run: npm run lint
 
       - name: Build
         env:
@@ -51,36 +46,21 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Worker types
-        run: npm run types
+      - run: npm ci
+      - run: npm run types
 
       - name: Build
         env:
           VITE_TLDRAW_LICENSE_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
         run: npm run build
 
-      - name: Skip deploy when Cloudflare secrets are missing
-        if: env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == ''
-        run: |
-          echo "Skipping deploy. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets to enable CD."
-
-      # NOTE: wrangler 4.x uses the Workers Versions API (/scripts/{name}/versions)
-      # which requires the API token to have Zone:Read in addition to Workers Scripts:Edit.
-      # Until the token includes Zone:Read, deploy manually via: npm run deploy
-      # (which uses wrangler login OAuth credentials that have full access).
-      - name: Deploy
-        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+      - name: Deploy (non-blocking)
         continue-on-error: true
-        run: npx wrangler deploy && echo "Deploy succeeded" || echo "Deploy failed: add Zone:Read to the API token, or run npm run deploy locally"
+        run: |
+          npx wrangler deploy

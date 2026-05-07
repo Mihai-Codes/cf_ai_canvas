@@ -599,7 +599,10 @@ class CanvasErrorBoundary extends Component<
 function CanvasView({ canvas }: { canvas?: CanvasState }) {
   const editorRef = useRef<Editor | null>(null);
   const lastHashRef = useRef("");
-  const [tldrawCount, setTldrawCount] = useState(0);
+  // Direct DOM ref — avoids React re-renders during tldraw store transactions.
+  // Calling setState inside editor.store.listen fires React re-renders mid-transact,
+  // which causes tldraw to throw and CanvasErrorBoundary to replace the canvas.
+  const tldrawSpanRef = useRef<HTMLSpanElement>(null);
 
   // Include generationId so same-content re-renders still trigger tldraw updates
   const generationId = canvas?.generationId ?? 0;
@@ -666,8 +669,22 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
       { history: "ignore" },
     );
 
+    // Update span directly (no React setState) so Playwright can read it
+    if (tldrawSpanRef.current) {
+      tldrawSpanRef.current.textContent = String(
+        editorRef.current?.getCurrentPageShapes().length ?? 0,
+      );
+    }
     // Update hash AFTER the run so a failed earlier attempt retries on next state change
     lastHashRef.current = nextHash;
+    // zoomToFit OUTSIDE editor.run: shapes committed, DOM can be measured
+    if (shapes.length > 0) {
+      setTimeout(() => {
+        try {
+          editorRef.current?.zoomToFit({ animation: { duration: 300 } });
+        } catch (_) {}
+      }, 0);
+    }
   }, [shapes, bindings, generationId]);
 
   return (
@@ -675,25 +692,20 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
       className="canvas-shell"
       style={{ width: "100%", height: "100%", minHeight: "500px" }}
     >
-      {/* Invisible element exposes actual tldraw shape count for Playwright */}
+      {/* Direct DOM ref span — updated without React state to avoid mid-transact re-renders */}
       <span
+        ref={tldrawSpanRef}
         data-testid="tldraw-shape-count"
         style={{ display: "none" }}
         aria-hidden="true"
       >
-        {tldrawCount}
+        0
       </span>
       <CanvasErrorBoundary>
         <Tldraw
           onMount={(editor) => {
             editorRef.current = editor;
-            // Subscribe to store so tldrawCount stays in sync with actual tldraw state
-            editor.store.listen(
-              () => setTldrawCount(editor.getCurrentPageShapes().length),
-              { source: "all", scope: "all" },
-            );
             if (shapes.length > 0) {
-              // Same defensive individual-create pattern as useEffect above
               editor.run(
                 () => {
                   for (const shape of shapes) {
@@ -709,9 +721,16 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
                 },
                 { history: "ignore" },
               );
-              try {
-                editor.zoomToFit();
-              } catch (_) {}
+              setTimeout(() => {
+                try {
+                  editor.zoomToFit();
+                } catch (_) {}
+              }, 0);
+              if (tldrawSpanRef.current) {
+                tldrawSpanRef.current.textContent = String(
+                  editor.getCurrentPageShapes().length,
+                );
+              }
             }
           }}
         />

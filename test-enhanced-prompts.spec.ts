@@ -48,10 +48,13 @@ test.describe('Enhanced Prompt Engineering', () => {
       // Wait for response
       await page.waitForSelector('.message.assistant', { timeout: 30000 });
       
-      // Clear for next test
+      // Clear for next test - ensure textarea is re-enabled
       const clearButton = page.locator('button:has-text("Clear chat")');
       await clearButton.click();
-      await page.waitForTimeout(1000); // Wait for clear to complete
+      await page.waitForTimeout(1500); // Wait for clear to complete
+      
+      // Verify textarea is enabled before continuing
+      await expect(textarea).toBeEnabled({ timeout: 10000 });
     }
   });
 

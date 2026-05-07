@@ -269,76 +269,60 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     }
     const pattern = DIAGRAM_PATTERNS.find((p) => p.name === patternName)!;
     const rawElements = pattern.generate(userPrompt);
-    // Convert pattern's gridCol/gridRow → semantic (no positions yet). Separate nodes and arrows.
-    const nodeElements: SemElement[] = [];
-    const arrowElements: SemElement[] = [];
-    let idCounter = 0;
-    rawElements.forEach((el: any) => {
-      const id = el.id ?? `fallback_${++idCounter}`;
-      const semEl: SemElement = {
-        id,
-        type: el.type,
-        width: el.width,
-        height: el.height,
-        text: el.text,
-        color: el.color,
-        startBoundTo: el.startBoundTo,
-        endBoundTo: el.endBoundTo,
-      };
-      if (el.type === "arrow" || el.type === "line") {
-        arrowElements.push(semEl);
+
+    // Grid constants — 280px column width, 170px row height, 50px origin
+    const COL_W = 280;
+    const ROW_H = 170;
+    const OX = 50;
+    const OY = 50;
+
+    // Pass 1: assign x/y to all nodes from gridCol/gridRow
+    const nodePosMap = new Map<
+      string,
+      { x: number; y: number; w: number; h: number }
+    >();
+    let fallbackId = 0;
+    const nodeElems: PlannedElement[] = [];
+    const arrowElems: PlannedElement[] = [];
+
+    for (const el of rawElements) {
+      const id = el.id ?? `fb_${++fallbackId}`;
+      const w = el.width ?? 160;
+      const h = el.height ?? 70;
+      if (el.type !== "arrow" && el.type !== "line") {
+        const x = OX + (el.gridCol ?? 0) * COL_W;
+        const y = OY + (el.gridRow ?? 0) * ROW_H;
+        nodePosMap.set(id, { x, y, w, h });
+        nodeElems.push({ ...el, id, x, y, width: w, height: h });
       } else {
-        nodeElements.push(semEl);
+        arrowElems.push({ ...el, id, x: 0, y: 0 });
       }
-    });
-    // Compute layout for nodes only
-    const positions = computeLayout(nodeElements);
-    const posMap = new Map(positions.map((p) => [p.id, p]));
-    // Merge node positions and compute arrow midpoints
-    const planned: PlannedElement[] = [
-      ...nodeElements.map((sem) => {
-        const pos = posMap.get(sem.id)!;
-        return {
-          id: sem.id,
-          type: sem.type,
-          x: pos.x,
-          y: pos.y,
-          width: pos.width,
-          height: pos.height,
-          text: sem.text,
-          color: sem.color ?? "blue",
-          startBoundTo: sem.startBoundTo,
-          endBoundTo: sem.endBoundTo,
-        };
-      }),
-      ...arrowElements.map((arrow) => {
-        const startId = arrow.startBoundTo;
-        const endId = arrow.endBoundTo;
-        let x = MARGIN_X;
-        let y = MARGIN_Y;
-        if (startId && posMap.has(startId) && endId && posMap.has(endId)) {
-          const start = posMap.get(startId)!;
-          const end = posMap.get(endId)!;
-          x = (start.x + end.x) / 2 - (arrow.width ?? 60) / 2;
-          y = (start.y + end.y) / 2 - (arrow.height ?? 4) / 2;
-        }
-        return {
-          id: arrow.id,
-          type: arrow.type,
-          x,
-          y,
-          width: arrow.width ?? 60,
-          height: arrow.height ?? 4,
-          text: arrow.text,
-          color: arrow.color ?? "blue",
-          startBoundTo: arrow.startBoundTo,
-          endBoundTo: arrow.endBoundTo,
-        };
-      }),
-    ];
+    }
+
+    // Pass 2: position each arrow at the midpoint between its bound nodes
+    for (const arrow of arrowElems) {
+      let x = OX;
+      let y = OY;
+      const s = arrow.startBoundTo
+        ? nodePosMap.get(arrow.startBoundTo)
+        : undefined;
+      const e = arrow.endBoundTo ? nodePosMap.get(arrow.endBoundTo) : undefined;
+      if (s && e) {
+        x = (s.x + s.w / 2 + e.x + e.w / 2) / 2;
+        y = (s.y + s.h / 2 + e.y + e.h / 2) / 2;
+      }
+      nodeElems.push({
+        ...arrow,
+        x,
+        y,
+        width: arrow.width ?? 60,
+        height: arrow.height ?? 4,
+      });
+    }
+
     return {
       summary: `Created a ${patternName.replace(/_/g, " ")} diagram`,
-      elements: planned,
+      elements: nodeElems,
     };
   }
 

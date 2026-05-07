@@ -8,9 +8,19 @@ import { initReactI18next, useTranslation } from "react-i18next";
 import { useAgent } from "agents/react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { toRichText } from "@tldraw/editor";
-import { createShapeId, Tldraw, type Editor, type TLCreateShapePartial } from "tldraw";
+import {
+  createShapeId,
+  Tldraw,
+  type Editor,
+  type TLCreateShapePartial,
+} from "tldraw";
 import type { UIMessage } from "ai";
-import type { CanvasElement, CanvasState, ElementColor, ElementType } from "./types";
+import type {
+  CanvasElement,
+  CanvasState,
+  ElementColor,
+  ElementType,
+} from "./types";
 
 type ChatAgentState = {
   canvas: CanvasState;
@@ -42,7 +52,9 @@ const GEO_MAP: Partial<Record<ElementType, string>> = {
   hexagon: "hexagon",
 };
 
-const TLDRAW_LICENSE_KEY = (import.meta as any).env?.VITE_TLDRAW_LICENSE_KEY as string | undefined;
+const TLDRAW_LICENSE_KEY = (import.meta as any).env?.VITE_TLDRAW_LICENSE_KEY as
+  | string
+  | undefined;
 
 const SVG_COLOR_MAP: Record<ElementColor, { stroke: string; fill: string }> = {
   black: { stroke: "#111827", fill: "#f8fafc" },
@@ -72,7 +84,9 @@ const RUNTIME_NOISE_PATTERNS = [
 function sanitizeMessageText(text: string): string {
   return text
     .split(/\r?\n/)
-    .filter((line) => !RUNTIME_NOISE_PATTERNS.some((pattern) => pattern.test(line)))
+    .filter(
+      (line) => !RUNTIME_NOISE_PATTERNS.some((pattern) => pattern.test(line)),
+    )
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -168,39 +182,50 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
 
   if (element.type === "arrow") {
     const props: any = {
-        color,
-        dash: element.dash ?? "draw",
-        size: element.size ?? "m",
-        fill: "none",
-        font: element.font ?? "draw",
-        richText: toRichText(text),
-        labelColor: color,
-        bend: 0,
-        start: { x: 0, y: 0 },
-        end: { x: width, y: height ?? 0 },
-        arrowheadStart: "none",
-        arrowheadEnd: "arrow",
-        labelPosition: 0.5,
-        scale: 1,
-        kind: "arc",
-        elbowMidPoint: 0.5,
+      color,
+      dash: element.dash ?? "draw",
+      size: element.size ?? "m",
+      fill: "none",
+      font: element.font ?? "draw",
+      richText: toRichText(text),
+      labelColor: color,
+      bend: 0,
+      start: { x: 0, y: 0 },
+      end: { x: width, y: height ?? 0 },
+      arrowheadStart: "none",
+      arrowheadEnd: "arrow",
+      labelPosition: 0.5,
+      scale: 1,
+      kind: "arc",
+      elbowMidPoint: 0.5,
     };
-    
-    // @ts-ignore
-    if (element.startBoundTo) {
-      // @ts-ignore
-      props.start = { type: "binding", boundShapeId: createShapeId(element.startBoundTo), normalizedAnchor: { x: 0.5, y: 0.5 }, isExact: false, isPrecise: false };
+
+    // Bindings are stored in element.start.boundTo / element.end.boundTo
+    const startBound = element.start?.boundTo;
+    const endBound = element.end?.boundTo;
+    if (startBound) {
+      props.start = {
+        type: "binding",
+        boundShapeId: createShapeId(startBound),
+        normalizedAnchor: { x: 0.5, y: 0.5 },
+        isExact: false,
+        isPrecise: false,
+      };
     }
-    // @ts-ignore
-    if (element.endBoundTo) {
-      // @ts-ignore
-      props.end = { type: "binding", boundShapeId: createShapeId(element.endBoundTo), normalizedAnchor: { x: 0.5, y: 0.5 }, isExact: false, isPrecise: false };
+    if (endBound) {
+      props.end = {
+        type: "binding",
+        boundShapeId: createShapeId(endBound),
+        normalizedAnchor: { x: 0.5, y: 0.5 },
+        isExact: false,
+        isPrecise: false,
+      };
     }
 
     return {
       ...base,
       type: "arrow",
-      props
+      props,
     } as TLCreateShapePartial;
   }
 
@@ -274,7 +299,13 @@ function SvgShape({ element }: { element: CanvasElement }) {
           ry={height / 2}
           {...strokeProps}
         />
-        <SvgLabel x={element.x} y={element.y} width={width} height={height} text={text} />
+        <SvgLabel
+          x={element.x}
+          y={element.y}
+          width={width}
+          height={height}
+          text={text}
+        />
       </g>
     );
   }
@@ -285,11 +316,19 @@ function SvgShape({ element }: { element: CanvasElement }) {
       [element.x + width, element.y + height / 2],
       [element.x + width / 2, element.y + height],
       [element.x, element.y + height / 2],
-    ].map((point) => point.join(",")).join(" ");
+    ]
+      .map((point) => point.join(","))
+      .join(" ");
     return (
       <g>
         <polygon points={points} {...strokeProps} />
-        <SvgLabel x={element.x} y={element.y} width={width} height={height} text={text} />
+        <SvgLabel
+          x={element.x}
+          y={element.y}
+          width={width}
+          height={height}
+          text={text}
+        />
       </g>
     );
   }
@@ -299,11 +338,19 @@ function SvgShape({ element }: { element: CanvasElement }) {
       [element.x + width / 2, element.y],
       [element.x + width, element.y + height],
       [element.x, element.y + height],
-    ].map((point) => point.join(",")).join(" ");
+    ]
+      .map((point) => point.join(","))
+      .join(" ");
     return (
       <g>
         <polygon points={points} {...strokeProps} />
-        <SvgLabel x={element.x} y={element.y + height * 0.16} width={width} height={height} text={text} />
+        <SvgLabel
+          x={element.x}
+          y={element.y + height * 0.16}
+          width={width}
+          height={height}
+          text={text}
+        />
       </g>
     );
   }
@@ -316,18 +363,30 @@ function SvgShape({ element }: { element: CanvasElement }) {
       [element.x + width * 0.78, element.y + height],
       [element.x + width * 0.22, element.y + height],
       [element.x, element.y + height / 2],
-    ].map((point) => point.join(",")).join(" ");
+    ]
+      .map((point) => point.join(","))
+      .join(" ");
     return (
       <g>
         <polygon points={points} {...strokeProps} />
-        <SvgLabel x={element.x} y={element.y} width={width} height={height} text={text} />
+        <SvgLabel
+          x={element.x}
+          y={element.y}
+          width={width}
+          height={height}
+          text={text}
+        />
       </g>
     );
   }
 
   if (element.type === "text") {
     return (
-      <text x={element.x} y={element.y + 24} className="svg-label svg-label-standalone">
+      <text
+        x={element.x}
+        y={element.y + 24}
+        className="svg-label svg-label-standalone"
+      >
         {text}
       </text>
     );
@@ -335,8 +394,21 @@ function SvgShape({ element }: { element: CanvasElement }) {
 
   return (
     <g>
-      <rect x={element.x} y={element.y} width={width} height={height} rx={8} {...strokeProps} />
-      <SvgLabel x={element.x} y={element.y} width={width} height={height} text={text} />
+      <rect
+        x={element.x}
+        y={element.y}
+        width={width}
+        height={height}
+        rx={8}
+        {...strokeProps}
+      />
+      <SvgLabel
+        x={element.x}
+        y={element.y}
+        width={width}
+        height={height}
+        text={text}
+      />
     </g>
   );
 }
@@ -356,17 +428,28 @@ function SvgLabel({
 }) {
   if (!text) return null;
   const words = text.split(/\s+/);
-  const lines = words.reduce<string[]>((acc, word) => {
-    const current = acc[acc.length - 1] ?? "";
-    const next = current ? `${current} ${word}` : word;
-    if (next.length > 20 && current) acc.push(word);
-    else acc[acc.length - 1] = next;
-    return acc;
-  }, [""]).slice(0, 3);
+  const lines = words
+    .reduce<string[]>(
+      (acc, word) => {
+        const current = acc[acc.length - 1] ?? "";
+        const next = current ? `${current} ${word}` : word;
+        if (next.length > 20 && current) acc.push(word);
+        else acc[acc.length - 1] = next;
+        return acc;
+      },
+      [""],
+    )
+    .slice(0, 3);
 
   const startY = y + height / 2 - ((lines.length - 1) * 18) / 2;
   return (
-    <text x={x + width / 2} y={startY} textAnchor="middle" dominantBaseline="middle" className="svg-label">
+    <text
+      x={x + width / 2}
+      y={startY}
+      textAnchor="middle"
+      dominantBaseline="middle"
+      className="svg-label"
+    >
       {lines.map((line, index) => (
         <tspan key={line + index} x={x + width / 2} dy={index === 0 ? 0 : 18}>
           {line}
@@ -389,7 +472,7 @@ function FallbackCanvas({ canvas }: { canvas?: CanvasState }) {
   const bounds = elements.reduce(
     (acc, element) => {
       const width = element.width ?? 100;
-const height = element.height ?? 60;
+      const height = element.height ?? 60;
       return {
         minX: Math.min(acc.minX, element.x),
         minY: Math.min(acc.minY, element.y),
@@ -410,13 +493,39 @@ const height = element.height ?? 60;
 
   const svgWidth = bounds.maxX - bounds.minX + padding * 2;
   const svgHeight = bounds.maxY - bounds.minY + padding * 2;
-  
+
   return (
-    <div className="fallback-canvas" aria-label="Read-only generated canvas" role="region" aria-labelledby="canvas-heading" style={{ width: '100%', overflow: 'auto' }}>
-      <h2 id="canvas-heading" className="sr-only">Generated Diagram</h2>
-      <svg viewBox={viewBox} role="img" aria-label="Generated diagram" focusable="false" style={{ width: `${svgWidth}px`, height: `${svgHeight}px`, minWidth: '100%', minHeight: '100%' }}>
+    <div
+      className="fallback-canvas"
+      aria-label="Read-only generated canvas"
+      role="region"
+      aria-labelledby="canvas-heading"
+      style={{ width: "100%", overflow: "auto" }}
+    >
+      <h2 id="canvas-heading" className="sr-only">
+        Generated Diagram
+      </h2>
+      <svg
+        viewBox={viewBox}
+        role="img"
+        aria-label="Generated diagram"
+        focusable="false"
+        style={{
+          width: `${svgWidth}px`,
+          height: `${svgHeight}px`,
+          minWidth: "100%",
+          minHeight: "100%",
+        }}
+      >
         <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <marker
+            id="arrowhead"
+            markerWidth="10"
+            markerHeight="7"
+            refX="9"
+            refY="3.5"
+            orient="auto"
+          >
             <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
           </marker>
         </defs>
@@ -425,7 +534,8 @@ const height = element.height ?? 60;
         ))}
       </svg>
       <div className="fallback-note">
-        Read-only renderer. Add `VITE_TLDRAW_LICENSE_KEY` to enable the production tldraw editor.
+        Read-only renderer. Add `VITE_TLDRAW_LICENSE_KEY` to enable the
+        production tldraw editor.
       </div>
     </div>
   );
@@ -440,13 +550,16 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
     return Object.values(canvas?.elements ?? {}).map(toTldrawShape);
   }, [canvas?.elements]);
 
-  const batchProcessShapes = useCallback((shapes: TLCreateShapePartial[], batchSize = 20) => {
-    const batches: TLCreateShapePartial[][] = [];
-    for (let i = 0; i < shapes.length; i += batchSize) {
-      batches.push(shapes.slice(i, i + batchSize));
-    }
-    return batches;
-  }, []);
+  const batchProcessShapes = useCallback(
+    (shapes: TLCreateShapePartial[], batchSize = 20) => {
+      const batches: TLCreateShapePartial[][] = [];
+      for (let i = 0; i < shapes.length; i += batchSize) {
+        batches.push(shapes.slice(i, i + batchSize));
+      }
+      return batches;
+    },
+    [],
+  );
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -459,7 +572,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
     if (shapes.length > 50) {
       setIsRendering(true);
       const batches = batchProcessShapes(shapes);
-      
+
       editor.run(
         () => {
           editor.updateInstanceState({ isReadonly: false });
@@ -469,13 +582,13 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
             .map((shape) => shape.id);
 
           if (currentIds.length > 0) editor.deleteShapes(currentIds);
-          
+
           batches.forEach((batch: TLCreateShapePartial[]) => {
             if (batch.length > 0) {
               editor.createShapes(batch);
             }
           });
-          
+
           editor.zoomToFit({ animation: { duration: 250 } });
           // Keep editable so users can drag components around
           editor.updateInstanceState({ isReadonly: false });
@@ -506,7 +619,10 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
   }, [shapes, batchProcessShapes, isRendering]);
 
   return (
-    <div className="canvas-shell" style={{ width: '100%', height: '100%', minHeight: '500px' }}>
+    <div
+      className="canvas-shell"
+      style={{ width: "100%", height: "100%", minHeight: "500px" }}
+    >
       {true ? (
         <Tldraw
           onMount={(editor) => {
@@ -576,7 +692,7 @@ function ChatPanel({
     const text = overrideText ?? input.trim();
     if (!text || isBusy) return;
     setInput("");
-    
+
     // Clear canvas to avoid race conditions with LLM receiving old state
     if (agent.state) {
       agent.setState({
@@ -589,11 +705,13 @@ function ChatPanel({
     if (imageData) {
       await sendMessage({
         text,
-        files: [{
-          type: 'file' as const,
-          url: imageData,
-          mediaType: 'image/png',
-        }],
+        files: [
+          {
+            type: "file" as const,
+            url: imageData,
+            mediaType: "image/png",
+          },
+        ],
       });
     } else {
       await sendMessage({ text });
@@ -611,100 +729,115 @@ function ChatPanel({
     });
   }
 
-   return (
-     <aside className="chat-panel">
-       <div className="panel-header">
-         <div>
-           <h1>cf_ai_canvas</h1>
-           <p>Default session</p>
-         </div>
-         <span className={connected ? "status connected" : "status"}>
-           {connected ? "connected" : "offline"}
-         </span>
-       </div>
+  return (
+    <aside className="chat-panel">
+      <div className="panel-header">
+        <div>
+          <h1>cf_ai_canvas</h1>
+          <p>Default session</p>
+        </div>
+        <span className={connected ? "status connected" : "status"}>
+          {connected ? "connected" : "offline"}
+        </span>
+      </div>
 
-       <div className="quick-prompts">
-         {[
-           "Draw a login flow with success and error paths",
-           "Create a Cloudflare Workers AI architecture diagram",
-           "Draw a 4-step MCP OAuth flow",
-           ].map((prompt) => (
-             <button key={prompt} type="button" onClick={() => setInput(prompt)}>
-               {prompt}
-             </button>
-           ))}
-       </div>
+      <div className="quick-prompts">
+        {[
+          "Draw a login flow with success and error paths",
+          "Create a Cloudflare Workers AI architecture diagram",
+          "Draw a 4-step MCP OAuth flow",
+        ].map((prompt) => (
+          <button key={prompt} type="button" onClick={() => setInput(prompt)}>
+            {prompt}
+          </button>
+        ))}
+      </div>
 
-       <div className="messages">
-         {messages.map((message) => (
-           <div key={message.id} className={`message ${message.role}`}>
-             <strong>{message.role}</strong>
-             <div className="message-content">
-               <MessagePart message={message} />
-             </div>
-           </div>
-         ))}
-         <div ref={messagesEndRef} />
-       </div>
+      <div className="messages">
+        {messages.map((message) => (
+          <div key={message.id} className={`message ${message.role}`}>
+            <strong>{message.role}</strong>
+            <div className="message-content">
+              <MessagePart message={message} />
+            </div>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
 
-       <form
-         className="composer"
-         onSubmit={(event) => {
-           event.preventDefault();
-           send();
-         }}
-       >
-         <textarea
-           value={input}
-           onChange={(e) => setInput(e.target.value)}
-           placeholder="Draw a microservices diagram..."
-           disabled={!connected || isBusy}
-           rows={3}
-         />
-         <div className="composer-actions">
-           <button type="button" onClick={clearHistory} disabled={messages.length === 0}>
-             Clear chat
-           </button>
-           <button type="button" onClick={resetCanvas}>
-             Reset canvas
-           </button>
-           <button
-             type="button"
-             onClick={() => document.getElementById('image-upload')?.click()}
-             disabled={!connected || isBusy}
-             title="Attach image for multimodal analysis"
-           >
-             Attach Image
-           </button>
-           <input type="file" id="image-upload" accept="image/*" style={{ display: 'none' }}
-             onChange={(event) => {
-               const file = event.target.files?.[0];
-               if (file) {
-                 const reader = new FileReader();
-                 reader.onload = (e) => {
-                   const imageData = e.target?.result;
-                   if (typeof imageData === 'string') {
-                     setPreviewImage(imageData);
-                     const enhancedPrompt = input.trim() || "Create a detailed diagram explaining the structure and components shown in this image";
-                     send(enhancedPrompt, imageData);
-                   }
-                 };
-                 reader.readAsDataURL(file);
-               }
-             }} />
-           <button type="submit" disabled={!input.trim() || isBusy}>
-             {isBusy ? "Wait..." : "Send"}
-           </button>
-         </div>
-       </form>
+      <form
+        className="composer"
+        onSubmit={(event) => {
+          event.preventDefault();
+          send();
+        }}
+      >
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Draw a microservices diagram..."
+          disabled={!connected || isBusy}
+          rows={3}
+        />
+        <div className="composer-actions">
+          <button
+            type="button"
+            onClick={clearHistory}
+            disabled={messages.length === 0}
+          >
+            Clear chat
+          </button>
+          <button type="button" onClick={resetCanvas}>
+            Reset canvas
+          </button>
+          <button
+            type="button"
+            onClick={() => document.getElementById("image-upload")?.click()}
+            disabled={!connected || isBusy}
+            title="Attach image for multimodal analysis"
+          >
+            Attach Image
+          </button>
+          <input
+            type="file"
+            id="image-upload"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const imageData = e.target?.result;
+                  if (typeof imageData === "string") {
+                    setPreviewImage(imageData);
+                    const enhancedPrompt =
+                      input.trim() ||
+                      "Create a detailed diagram explaining the structure and components shown in this image";
+                    send(enhancedPrompt, imageData);
+                  }
+                };
+                reader.readAsDataURL(file);
+              }
+            }}
+          />
+          <button type="submit" disabled={!input.trim() || isBusy}>
+            {isBusy ? "Wait..." : "Send"}
+          </button>
+        </div>
+      </form>
 
-       {previewImage && (
-         <div className="image-preview">
-           <img src={previewImage} alt="Attached image preview" style={{ maxWidth: '100%', borderRadius: '4px' }} />
-         </div>
-       )}
-     </aside>
-   );
+      {previewImage && (
+        <div className="image-preview">
+          <img
+            src={previewImage}
+            alt="Attached image preview"
+            style={{ maxWidth: "100%", borderRadius: "4px" }}
+          />
+        </div>
+      )}
+    </aside>
+  );
 }
 
 function App() {
@@ -737,22 +870,20 @@ function App() {
   );
 }
 
-i18n
-  .use(initReactI18next)
-  .init({
-    lng: navigator.language.split('-')[0] || 'en',
-    fallbackLng: 'en',
-    interpolation: {
-      escapeValue: false,
+i18n.use(initReactI18next).init({
+  lng: navigator.language.split("-")[0] || "en",
+  fallbackLng: "en",
+  interpolation: {
+    escapeValue: false,
+  },
+  resources: {
+    en: {
+      translation: require("../public/locales/en/translation.json"),
     },
-    resources: {
-      en: {
-        translation: require('../public/locales/en/translation.json'),
-      },
-      ro: {
-        translation: require('../public/locales/ro/translation.json'),
-      },
+    ro: {
+      translation: require("../public/locales/ro/translation.json"),
     },
-  });
+  },
+});
 
 createRoot(document.getElementById("root")!).render(<App />);

@@ -402,8 +402,17 @@ Return only valid JSON with this exact shape:
 
 Intent: ${intent}.
 Create at least ${minimumElements} elements and include connectors with arrows.
-Use non-overlapping positions and labels that are clear.
-Do not include markdown or explanations.`,
+Layout rules:
+- Use a grid system with 120px spacing between elements
+- Start from x=60, y=60 and increment by 120px
+- Keep at least 40px minimum spacing between all elements
+- Place elements left-to-right, then top-to-bottom
+- Use arrows to show flow between elements
+- Ensure no elements overlap
+- Use clear, concise labels (3-5 words max)
+- For architecture: group related components with frames
+- For flows: use diamonds for decisions, rectangles for steps
+Do not include markdown, explanations, or code comments.`,
       prompt,
     });
 
@@ -412,9 +421,56 @@ Do not include markdown or explanations.`,
     return this.isPlanRichEnough(parsed, intent) ? parsed : null;
   }
 
+  private fixLayoutOverlaps(elements: PlannedElement[]): PlannedElement[] {
+    const GRID_SIZE = 120;
+    const MIN_SPACING = 40;
+    
+    const placed: PlannedElement[] = [];
+    const grid: Record<string, boolean> = {};
+    
+    for (const element of elements) {
+      const originalX = element.x ?? 100;
+      const originalY = element.y ?? 100;
+      
+      let x = originalX;
+      let y = originalY;
+      let attempts = 0;
+      const maxAttempts = 20;
+      
+      while (attempts < maxAttempts) {
+        const gridX = Math.round(x / GRID_SIZE);
+        const gridY = Math.round(y / GRID_SIZE);
+        const gridKey = `${gridX}:${gridY}`;
+        
+        if (!grid[gridKey]) {
+          grid[gridKey] = true;
+          placed.push({ ...element, x, y });
+          break;
+        }
+        
+        x += GRID_SIZE;
+        if (x > 1200) {
+          x = Math.max(40, originalX - GRID_SIZE * (attempts % 3));
+          y += GRID_SIZE;
+        }
+        
+        attempts++;
+      }
+      
+      if (attempts >= maxAttempts && !placed.find(e => e === element)) {
+        placed.push(element);
+      }
+    }
+    
+    return placed;
+  }
+
   private applyPlan(plan: DiagramPlan) {
     const nextElements = { ...this.state.canvas.elements };
-    for (const input of plan.elements) {
+    
+    const fixedElements = this.fixLayoutOverlaps(plan.elements);
+    
+    for (const input of fixedElements) {
       const element = this.createElement(input);
       nextElements[element.id] = element;
     }

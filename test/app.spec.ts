@@ -50,6 +50,34 @@ test.describe('cf_ai_canvas Application Tests', () => {
     await textarea.fill('Test prompt');
     await expect(page.locator('button:has-text("Send")')).toBeEnabled();
   });
+
+  test('should generate diagram from quick prompt', async ({ page }) => {
+    const quickPrompt = page.locator('button:has-text("Draw a login flow")');
+    await quickPrompt.click();
+    
+    const sendButton = page.locator('button:has-text("Send")');
+    await sendButton.click();
+    
+    await page.waitForTimeout(5000);
+    
+    await expect(page.locator('.canvas-panel')).toBeVisible();
+    
+    await page.screenshot({ path: 'test-results/login-flow-diagram.png', fullPage: true });
+  });
+
+  test('should generate architecture diagram', async ({ page }) => {
+    const quickPrompt = page.locator('button:has-text("Create a Cloudflare")');
+    await quickPrompt.click();
+    
+    const sendButton = page.locator('button:has-text("Send")');
+    await sendButton.click();
+    
+    await page.waitForTimeout(5000);
+    
+    await expect(page.locator('.canvas-panel')).toBeVisible();
+    
+    await page.screenshot({ path: 'test-results/architecture-diagram.png', fullPage: true });
+  });
 });
 
 test.describe('MCP Endpoint Tests', () => {

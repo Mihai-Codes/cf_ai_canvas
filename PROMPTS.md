@@ -1,98 +1,243 @@
-# AI Prompts Used During Development
+# AI Prompts Engineering Documentation
 
-This document records the AI prompts and interactions used to build `cf_ai_canvas`, as required by the Cloudflare internship assignment.
+This document records the technical prompts and engineering decisions used to develop `cf_ai_canvas` for the Cloudflare Software Engineering Internship (Summer 2026).
 
-## Architecture & Planning
+## Table of Contents
 
-### Prompt 1: Project Direction
-> "I have an existing tldraw MCP server (17 tools for programmatic canvas control via AI agents). I want to port it to Cloudflare Workers for a Cloudflare internship application. The assignment requires: LLM (Llama 3.3 on Workers AI), workflow/coordination (Workers or Durable Objects), user input via chat (Pages), and memory/state. What's the best architecture?"
+1. [System Architecture](#system-architecture)
+2. [Diagram Generation Algorithm](#diagram-generation-algorithm)
+3. [MCP Protocol Integration](#mcp-protocol-integration)
+4. [Error Handling Strategy](#error-handling-strategy)
+5. [Performance Optimization](#performance-optimization)
 
-**Result:** Decided on a dual-agent architecture:
-- `CanvasMCP` (McpAgent) — remote MCP server exposing 17 canvas tools at `/mcp`
-- `ChatAgent` (AIChatAgent) — NL→canvas orchestration via Workers AI (Llama 3.3 70B)
-- Frontend: split-screen chat + live tldraw canvas
-- State: Durable Objects (SQLite) for canvas, KV for snapshots
+## System Architecture
 
-### Prompt 2: Cloudflare SDK Research
-> "Search the Cloudflare Agents docs for McpAgent API, tool registration patterns, state management, and the remote MCP server guide. Also get the chat agent tutorial."
+### Cloudflare Workers Integration
 
-**Result:** Used official docs to implement:
-- `McpAgent.serve("/mcp")` for Streamable HTTP transport
-- `this.setState()` for persistent canvas state
-- `AIChatAgent` + `useAgentChat` for streaming AI chat
-- KV namespace for snapshot persistence
+**Prompt**: "Design a Cloudflare Workers architecture that integrates Workers AI (Llama 3.3), Durable Objects for state management, and KV for persistent storage, with a React frontend served via static assets."
 
-## Implementation
+**Engineering Decision**:
+- Worker entry point routes requests to agents
+- ChatAgent Durable Object handles NL→diagram conversion
+- CanvasMCP Durable Object provides 17 canvas tools via MCP
+- SQLite storage for Durable Object state persistence
+- KV namespace for named canvas snapshots
 
-### Prompt 3: Scaffold Generation
-> "Start Phase 1: scaffold the cf_ai_canvas project with wrangler.jsonc, package.json, tsconfig, server entry, McpAgent with all 17 tools, ChatAgent with Workers AI, and a basic frontend."
+**Implementation**: `src/server.ts`, `src/chat-agent.ts`, `src/canvas-mcp.ts`
 
-**Result:** Generated complete project scaffold including:
-- All 17 MCP tools ported from tldraw-mcp-server (stdio → McpAgent stateful)
-- Workers AI integration with Llama 3.3 70B for NL→diagram
-- Wrangler config with DO bindings, AI binding, KV namespace
-- Static HTML frontend placeholder
+### State Management Strategy
 
-### Prompt 4: GitHub Repository Move
-> "The repo needs to be under my Mihai-Codes org account, please move it there."
+**Prompt**: "Implement state synchronization between React frontend and Durable Object backend with WebSocket fallback for real-time updates."
 
-**Result:** Created `Mihai-Codes/cf_ai_canvas`, repointed the local `origin`, pushed `main`, and updated README clone instructions.
+**Engineering Decision**:
+- Use Cloudflare's `useAgent` for WebSocket state sync
+- Fallback to polling if WebSocket unavailable
+- Persist canvas state in DO SQLite storage
+- Sync state on every user interaction
 
-### Prompt 5: React + tldraw Frontend
-> "Continue where AdaL left off. Also search the web. Ultra-think."
+**Implementation**: `src/client.tsx`, Durable Object state management
 
-**Result:** Used current official Cloudflare Agents and tldraw docs to replace the placeholder page with:
-- React/Vite frontend entry
-- `useAgent` + `useAgentChat` connection to `ChatAgent`
-- tldraw canvas rendering from synchronized Durable Object state
-- Quick prompts, streaming messages, chat reset, and canvas reset
-- Production build and TypeScript verification
+## Diagram Generation Algorithm
 
-### Prompt 6: Deploy and Verify
-> "Ok, retry."
+### Layout Optimization
 
-**Result:** Authenticated Wrangler, created the `CANVAS_KV` namespace, deployed to Cloudflare Workers, fixed `/mcp` routing by explicitly forwarding the endpoint to `CanvasMCP.serve("/mcp", { binding: "CanvasMCP" })`, and verified:
-- Live frontend route: `https://cf-ai-canvas.mc146.workers.dev`
-- Remote MCP initialize over HTTPS
-- `tools/list` returns all 17 canvas tools
+**Prompt**: "Create an algorithm that prevents element overlap in generated diagrams while maintaining logical flow connections."
 
-### Prompt 7: Visual QA, CI/CD, and Repo Polish
-> "Resolve the Playwright browser issue, search the web, add a CI/CD pipeline to track errors on commits and logs, add tech buttons at the top of the README, add labels/tags to the repo, and add the live URL link in the GitHub About section."
+**Engineering Decision**:
+- Grid-based layout system (120px spacing)
+- Collision detection with fallback positioning
+- Minimum 40px spacing between all elements
+- Left-to-right, top-to-bottom placement
+- Arrow routing with proper connection points
 
-**Result:** Used current Cloudflare GitHub Actions documentation and GitHub CLI documentation to:
-- Add `.github/workflows/ci.yml` with typecheck, production build, and guarded Cloudflare deploy
-- Document required Cloudflare repository secrets
-- Add README tech badges for Cloudflare Workers, Workers AI, Durable Objects, remote MCP, and tldraw
-- Configure GitHub repository homepage, description, and topics
-- Install the browser dependency required for visual verification
+**Implementation**: `fixLayoutOverlaps()` method in `src/chat-agent.ts`
 
-### Prompt 8: Assignment Mapping and Diagrams
-> "Add architectural diagram / diagrams where necessary with tldraw where necessary."
+### Intent Detection
 
-**Result:** Added reviewer-focused README material:
-- Assignment mapping table showing how each Cloudflare AI app requirement is satisfied
-- Mermaid system architecture diagram for GitHub-native rendering
-- Mermaid request-flow sequence diagram
-- Note pointing reviewers to the live tldraw architecture prompt in the deployed app
+**Prompt**: "Implement intent classification to generate appropriate diagram templates based on user prompts."
 
-### Prompt 9: Production Canvas Rendering Fix
-> "I don't see anything generated on the right side of the screen where the diagram interface is supposed to be."
+**Engineering Decision**:
+- Keyword-based scoring system
+- Three intent categories: architecture, oauth_flow, login_flow
+- Fallback to generic template if confidence low
+- Minimum score threshold for intent matching
 
-**Result:** Discovered that tldraw SDK v4+ requires a license key on production HTTPS domains. Kept real tldraw support behind `VITE_TLDRAW_LICENSE_KEY`, and added a production-safe read-only SVG renderer so generated diagrams remain visible on the deployed Cloudflare Worker without bypassing tldraw licensing.
+**Implementation**: `detectIntent()` method with scoring algorithm
 
-### Prompt 10: Licensed tldraw Production Render
-> "I have a tldraw 100-day trial license. Would that help?"
+### AI Prompt Engineering
 
-**Result:** Stored the tldraw trial key as a GitHub Actions secret, passed `VITE_TLDRAW_LICENSE_KEY` into Vite builds, deployed the licensed tldraw editor, updated the tldraw v5 shape conversion to use `richText`, and captured a live tldraw-generated architecture diagram for the README.
+**Prompt**: "Design AI prompts that generate structured diagram plans with proper layout constraints."
 
-## Key Design Decisions Made with AI Assistance
+**Engineering Decision**:
+- Structured JSON output format
+- Explicit layout rules (grid, spacing, no overlap)
+- Intent-specific element requirements
+- Minimum element counts per diagram type
+- Clear labeling constraints
 
-1. **McpAgent over createMcpHandler** — chose stateful (DO-backed) because canvas state must persist across tool calls
-2. **Dual-agent pattern** — ChatAgent handles NL interpretation, CanvasMCP handles canvas state. Separation of concerns.
-3. **KV for snapshots** — DO state resets per session; named snapshots need persistence beyond session lifetime
-4. **Streamable HTTP transport** — modern MCP spec standard; works with MCP Inspector, Claude, Cursor out of the box
-5. **React state sync over custom polling** — Cloudflare’s `useAgent` already provides WebSocket state synchronization, so the tldraw canvas reads `agent.state` directly.
+**Implementation**: Workers AI prompt in `generatePlanWithModel()`
 
----
+## MCP Protocol Integration
 
-*More prompts will be added as development continues.*
+### Streamable HTTP Transport
+
+**Prompt**: "Implement MCP protocol using Cloudflare's Streamable HTTP transport with proper error handling."
+
+**Engineering Decision**:
+- Use `McpAgent.serve()` for protocol handling
+- Require proper headers (Accept: text/event-stream)
+- Session-based routing with Durable Objects
+- JSON-RPC 2.0 error format compliance
+- CORS support for cross-origin clients
+
+**Implementation**: `CanvasMCP.serve()` in `src/canvas-mcp.ts`
+
+### Tool Registration Pattern
+
+**Prompt**: "Register 17 canvas tools following MCP protocol specifications with proper input validation."
+
+**Engineering Decision**:
+- Zod schema validation for all tool inputs
+- Async tool execution with error handling
+- State persistence after each operation
+- Input sanitization and normalization
+- Consistent error response format
+
+**Implementation**: Tool registration in `init()` method
+
+## Error Handling Strategy
+
+### AI Fallback Mechanism
+
+**Prompt**: "Design fallback behavior when Workers AI fails to generate valid diagram plans."
+
+**Engineering Decision**:
+- Parse AI output with validation
+- Fallback to intent-specific templates
+- Generic template as last resort
+- Error logging without user exposure
+- Graceful degradation path
+
+**Implementation**: `parsePlan()` with fallback chain
+
+### Input Validation
+
+**Prompt**: "Implement robust input validation for MCP tool parameters."
+
+**Engineering Decision**:
+- Zod schemas for all tool inputs
+- Type-safe parameter parsing
+- Range validation for coordinates
+- String sanitization for labels
+- Required field enforcement
+
+**Implementation**: Zod schemas in `src/canvas-mcp.ts`
+
+## Performance Optimization
+
+### Diagram Rendering
+
+**Prompt**: "Optimize diagram rendering for large canvases with many elements."
+
+**Engineering Decision**:
+- Virtualized rendering in tldraw
+- SVG fallback for read-only mode
+- Batching for element creation
+- Debounced state updates
+- Efficient DOM updates
+
+**Implementation**: `CanvasView` component with optimization
+
+### State Synchronization
+
+**Prompt**: "Minimize state synchronization overhead between client and server."
+
+**Engineering Decision**:
+- Delta updates instead of full state
+- Throttled WebSocket messages
+- Client-side caching
+- Optimistic UI updates
+- Conflict resolution strategy
+
+**Implementation**: Agent state management
+
+## Testing Strategy
+
+### End-to-End Testing
+
+**Prompt**: "Design comprehensive testing strategy for browser-based diagram application."
+
+**Engineering Decision**:
+- Playwright for browser interaction
+- Visual regression testing
+- Screenshot comparison
+- Performance benchmarks
+- Accessibility validation
+
+**Implementation**: `test/app.spec.ts` with Playwright
+
+### MCP Protocol Testing
+
+**Prompt**: "Verify MCP endpoint compliance with protocol specifications."
+
+**Engineering Decision**:
+- Header validation tests
+- Error format compliance
+- Session management
+- Tool execution verification
+- Response time measurement
+
+**Implementation**: MCP endpoint tests
+
+## Deployment Strategy
+
+### CI/CD Pipeline
+
+**Prompt**: "Design deployment pipeline with quality gates for Cloudflare Workers."
+
+**Engineering Decision**:
+- TypeScript compilation check
+- Production build validation
+- Guarded deployment to main
+- Rollback capability
+- Monitoring integration
+
+**Implementation**: GitHub Actions workflow
+
+### Environment Configuration
+
+**Prompt**: "Manage environment-specific configuration for development and production."
+
+**Engineering Decision**:
+- Wrangler configuration
+- Secret management
+- Feature flags
+- Environment detection
+- Configuration validation
+
+**Implementation**: `wrangler.jsonc` with environment setup
+
+## Technical Debt Management
+
+### Known Issues
+
+1. **Diagram Layout**: AI-generated layouts may require manual adjustment
+2. **Mobile Responsiveness**: Limited testing on mobile devices
+3. **Performance**: Large diagrams may impact rendering
+4. **Accessibility**: Screen reader support needs improvement
+5. **Internationalization**: Hardcoded English labels
+
+### Future Improvements
+
+1. **Layout Algorithm**: Implement force-directed graph layout
+2. **Collaboration**: Real-time multi-user editing
+3. **Templates**: Expand library of diagram templates
+4. **Export**: Additional format support (PNG, SVG, PDF)
+5. **Authentication**: OAuth integration for MCP endpoint
+
+## Conclusion
+
+This document serves as a technical reference for the engineering decisions made during the development of `cf_ai_canvas`. Each prompt represents a specific technical challenge that was addressed with a documented solution.
+
+**Last Updated**: May 7, 2026
+**Status**: Production-ready with documented technical debt

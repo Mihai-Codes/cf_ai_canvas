@@ -587,7 +587,14 @@ function ChatPanel({
 
     // Send message to LLM first to lock in the input state
     if (imageData) {
-      await sendMessage({ text, parts: [{ type: 'image', data: imageData }] as any });
+      await sendMessage({
+        text,
+        files: [{
+          type: 'file' as const,
+          url: imageData,
+          mediaType: 'image/png',
+        }],
+      });
     } else {
       await sendMessage({ text });
     }

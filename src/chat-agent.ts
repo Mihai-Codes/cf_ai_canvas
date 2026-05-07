@@ -32,6 +32,7 @@ interface ChatAgentState {
 }
 
 type PlannedElement = {
+  id?: string;
   type: CanvasElement["type"];
   x: number;
   y: number;
@@ -39,6 +40,8 @@ type PlannedElement = {
   height?: number;
   text?: string;
   color?: CanvasElement["color"];
+  startBoundTo?: string;
+  endBoundTo?: string;
 };
 
 
@@ -75,6 +78,7 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
 
   // Helper: create an element and persist to state
   private createElement(input: {
+    id?: string;
     type: string;
     x: number;
     y: number;
@@ -85,15 +89,15 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
     startBoundTo?: string;
     endBoundTo?: string;
   }): CanvasElement {
-    const id = crypto.randomUUID();
+    const id = input.id || crypto.randomUUID();
     const now = new Date().toISOString();
     const element: CanvasElement = {
       id,
       type: input.type as CanvasElement["type"],
       x: input.x,
       y: input.y,
-      width: input.width ?? 100,
-      height: input.height ?? 100,
+      width: input.width ?? 120,
+      height: input.height ?? 80,
       text: input.text,
       color: (input.color as CanvasElement["color"]) ?? "black",
       fill: "none",
@@ -246,57 +250,152 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
   }
 
   // Generate intelligent fallback diagram based on prompt analysis
-  private generateFallbackDiagram(userPrompt: string): { summary: string; elements: any[] } {
+  private generateFallbackDiagram(userPrompt: string): { summary: string; elements: PlannedElement[] } {
     const lowerPrompt = userPrompt.toLowerCase();
-    
+
     // Try to match with predefined patterns
     for (const pattern of DIAGRAM_PATTERNS) {
       if (pattern.keywords.some(keyword => lowerPrompt.includes(keyword))) {
         const result = pattern.generate(userPrompt);
         return {
           summary: `Created a ${pattern.name.replace(/_/g, ' ')} diagram`,
-          elements: result.map(element => ({
-            type: element.type as any,
-            x: element.x,
-            y: element.y,
-            width: element.width,
-            height: element.height,
-            text: element.text,
-            color: element.color
-          }))
+          elements: result.map(element => {
+            // Convert gridCol/gridRow to pixel coordinates for pattern elements
+            const gridCol = element.gridCol ?? 0;
+            const gridRow = element.gridRow ?? 0;
+            return {
+              id: element.id,
+              type: element.type as PlannedElement["type"],
+              x: element.x ?? (gridCol * 300 + 100),
+              y: element.y ?? (gridRow * 200 + 100),
+              width: element.width,
+              height: element.height,
+              text: element.text,
+              color: element.color as PlannedElement["color"],
+              startBoundTo: element.startBoundTo,
+              endBoundTo: element.endBoundTo,
+            };
+          })
         };
       }
     }
-    
+
     // If no pattern matches, analyze prompt content and generate appropriate fallback
     if (lowerPrompt.includes('login') || lowerPrompt.includes('auth') || lowerPrompt.includes('sign')) {
       const result = DIAGRAM_PATTERNS.find(p => p.name === 'login_flow')!.generate(userPrompt);
-      return { summary: 'Created a login flow diagram', elements: result };
+      return {
+        summary: 'Created a login flow diagram',
+        elements: result.map(element => {
+          const gridCol = element.gridCol ?? 0;
+          const gridRow = element.gridRow ?? 0;
+          return {
+            id: element.id,
+            type: element.type as PlannedElement["type"],
+            x: element.x ?? (gridCol * 300 + 100),
+            y: element.y ?? (gridRow * 200 + 100),
+            width: element.width, height: element.height, text: element.text,
+            color: element.color as PlannedElement["color"],
+            startBoundTo: element.startBoundTo, endBoundTo: element.endBoundTo,
+          };
+        })
+      };
     }
-    
+
     if (lowerPrompt.includes('cloudflare') || lowerPrompt.includes('architecture')) {
       const result = DIAGRAM_PATTERNS.find(p => p.name === 'cloudflare_architecture')!.generate(userPrompt);
-      return { summary: 'Created a Cloudflare architecture diagram', elements: result };
+      return {
+        summary: 'Created a Cloudflare architecture diagram',
+        elements: result.map(element => {
+          const gridCol = element.gridCol ?? 0;
+          const gridRow = element.gridRow ?? 0;
+          return {
+            id: element.id,
+            type: element.type as PlannedElement["type"],
+            x: element.x ?? (gridCol * 300 + 100),
+            y: element.y ?? (gridRow * 200 + 100),
+            width: element.width, height: element.height, text: element.text,
+            color: element.color as PlannedElement["color"],
+          };
+        })
+      };
     }
-    
+
     if (lowerPrompt.includes('oauth') || lowerPrompt.includes('authentication flow')) {
       const result = DIAGRAM_PATTERNS.find(p => p.name === 'oauth_flow')!.generate(userPrompt);
-      return { summary: 'Created an OAuth flow diagram', elements: result };
+      return {
+        summary: 'Created an OAuth flow diagram',
+        elements: result.map(element => {
+          const gridCol = element.gridCol ?? 0;
+          const gridRow = element.gridRow ?? 0;
+          return {
+            id: element.id,
+            type: element.type as PlannedElement["type"],
+            x: element.x ?? (gridCol * 300 + 100),
+            y: element.y ?? (gridRow * 200 + 100),
+            width: element.width, height: element.height, text: element.text,
+            color: element.color as PlannedElement["color"],
+          };
+        })
+      };
     }
-    
+
     if (lowerPrompt.includes('microservice') || lowerPrompt.includes('api') || lowerPrompt.includes('service')) {
       const result = DIAGRAM_PATTERNS.find(p => p.name === 'microservices')!.generate(userPrompt);
-      return { summary: 'Created a microservices diagram', elements: result };
+      return {
+        summary: 'Created a microservices diagram',
+        elements: result.map(element => {
+          const gridCol = element.gridCol ?? 0;
+          const gridRow = element.gridRow ?? 0;
+          return {
+            id: element.id,
+            type: element.type as PlannedElement["type"],
+            x: element.x ?? (gridCol * 300 + 100),
+            y: element.y ?? (gridRow * 200 + 100),
+            width: element.width, height: element.height, text: element.text,
+            color: element.color as PlannedElement["color"],
+            startBoundTo: element.startBoundTo, endBoundTo: element.endBoundTo,
+          };
+        })
+      };
     }
-    
+
     if (lowerPrompt.includes('database') || lowerPrompt.includes('storage') || lowerPrompt.includes('data')) {
-      const result = DIAGRAM_PATTERNS.find(p => p.name === 'database_schema')!.generate(userPrompt);
-      return { summary: 'Created a database schema diagram', elements: result };
+      const result = DIAGRAM_PATTERNS.find(p => p.name === 'data_flow')!.generate(userPrompt);
+      return {
+        summary: 'Created a database schema diagram',
+        elements: result.map(element => {
+          const gridCol = element.gridCol ?? 0;
+          const gridRow = element.gridRow ?? 0;
+          return {
+            id: element.id,
+            type: element.type as PlannedElement["type"],
+            x: element.x ?? (gridCol * 300 + 100),
+            y: element.y ?? (gridRow * 200 + 100),
+            width: element.width, height: element.height, text: element.text,
+            color: element.color as PlannedElement["color"],
+          };
+        })
+      };
     }
-    
+
     // Default fallback - use the first pattern if nothing matches
     const result = DIAGRAM_PATTERNS[0].generate(userPrompt);
-    return { summary: 'Created a diagram', elements: result };
+    return {
+      summary: 'Created a diagram',
+      elements: result.map(element => {
+        const gridCol = element.gridCol ?? 0;
+        const gridRow = element.gridRow ?? 0;
+        return {
+          id: element.id,
+          type: element.type as PlannedElement["type"],
+          x: element.x ?? (gridCol * 300 + 100),
+          y: element.y ?? (gridRow * 200 + 100),
+          width: element.width, height: element.height, text: element.text,
+          color: element.color as PlannedElement["color"],
+          startBoundTo: element.startBoundTo, endBoundTo: element.endBoundTo,
+        };
+      })
+    };
   }
 
   private applyPlan(plan: { summary: string; elements: PlannedElement[] } | PlannedElement[]) {

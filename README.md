@@ -58,14 +58,7 @@ Named snapshots"]
 
 ## Multimodal Diagram Generation
 
-###  Advanced Features
 
-The system now supports **multimodal input** combining images and text:
-
-- ** Image Upload**: Attach diagram sketches or screenshots
-- **🤖 AI Analysis**: Llama 3.2 Vision extracts structure from images
-- **📝 Text Enhancement**: Combine image analysis with text prompts
-- **🎨 Diagram Generation**: Llama 3.3 creates tldraw-compatible shapes
 
 ###  Usage Examples
 
@@ -82,7 +75,7 @@ The system now supports **multimodal input** combining images and text:
 
 ###  Current Limitations
 
-See [MODEL_LIMITATIONS.md](MODEL_LIMITATIONS.md) for detailed explanation of:
+
 - Llama 3.3's spatial reasoning constraints
 - Why complex prompts generate simple diagrams
 - Workarounds and optimization strategies
@@ -164,7 +157,7 @@ cf_ai_canvas/
 ├── docs/assets/           # Screenshots
 ├── .github/workflows/    # CI/CD pipeline
 ├── PROMPTS.md             # AI prompts used
-├── MODEL_LIMITATIONS.md  # LLM spatial reasoning constraints
+
 ├── README.md              # Documentation
 └── wrangler.jsonc         # Cloudflare configuration
 ```

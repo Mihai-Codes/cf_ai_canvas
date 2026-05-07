@@ -520,7 +520,8 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
             image_b64: b64,
           },
         );
-        enhancedPrompt = `User prompt: ${userPrompt}\n\nImage analysis: ${visionResponse.result.response}\n\n${this.enhancePrompt(visionResponse.result.response, false)}`;
+        const visionText = (visionResponse as any).result.response;
+        enhancedPrompt = `User prompt: ${userPrompt}\n\nImage analysis: ${visionText}\n\n${this.enhancePrompt(visionText, false)}`;
       } catch (error) {
         // Vision unavailable, show message
         const errorMessage = {

@@ -568,20 +568,24 @@ function ChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function send() {
-    const text = input.trim();
+  async function send(overrideText?: string, imageData?: string) {
+    const text = overrideText ?? input.trim();
     if (!text || isBusy) return;
     setInput("");
     
-    // Send message to LLM first to lock in the input state
-    await sendMessage({ text });
-
-    // Then clear canvas to avoid race conditions with LLM receiving old state
+    // Clear canvas to avoid race conditions with LLM receiving old state
     if (agent.state) {
       agent.setState({
         ...agent.state,
         canvas: { ...agent.state.canvas, elements: {} },
       });
+    }
+
+    // Send message to LLM first to lock in the input state
+    if (imageData) {
+      await sendMessage({ text, parts: [{ type: 'image', data: imageData }] as any });
+    } else {
+      await sendMessage({ text });
     }
   }
 
@@ -614,7 +618,7 @@ function ChatPanel({
           "Create a Cloudflare Workers AI architecture diagram",
           "Draw a 4-step MCP OAuth flow",
         ].map((prompt) => (
-          <button key={prompt} type="button" onClick={() => setInput(prompt)}>
+          <button key={prompt} type="button" onClick={() => send(prompt)}>
             {prompt}
           </button>
         ))}
@@ -676,8 +680,7 @@ function ChatPanel({
                 reader.onload = (e) => {
                   const imageData = e.target?.result;
                   if (typeof imageData === 'string') {
-                    sendMessage({ text: input, parts: [{ type: 'image', data: imageData }] as any });
-                    setInput('');
+                    send(input || "Analyze this diagram", imageData);
                   }
                 };
                 reader.readAsDataURL(file);

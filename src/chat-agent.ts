@@ -13,6 +13,7 @@ import { createWorkersAI } from "workers-ai-provider";
 import { generateText, streamText } from "ai";
 import { z } from "zod";
 import type { CanvasElement, CanvasState } from "./types";
+import { DIAGRAM_PATTERNS } from "./diagram-patterns";
 
 // Shape and color schemas
 const ShapeTypeSchema = z.enum([
@@ -215,6 +216,60 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
     }
   }
 
+  // Generate intelligent fallback diagram based on prompt analysis
+  private generateFallbackDiagram(userPrompt: string): { summary: string; elements: any[] } {
+    const lowerPrompt = userPrompt.toLowerCase();
+    
+    // Try to match with predefined patterns
+    for (const pattern of DIAGRAM_PATTERNS) {
+      if (pattern.keywords.some(keyword => lowerPrompt.includes(keyword))) {
+        const result = pattern.generate(userPrompt);
+        return {
+          summary: `Created a ${pattern.name.replace(/_/g, ' ')} diagram`,
+          elements: result.map(element => ({
+            type: element.type as any,
+            x: element.x,
+            y: element.y,
+            width: element.width,
+            height: element.height,
+            text: element.text,
+            color: element.color
+          }))
+        };
+      }
+    }
+    
+    // If no pattern matches, analyze prompt content and generate appropriate fallback
+    if (lowerPrompt.includes('login') || lowerPrompt.includes('auth') || lowerPrompt.includes('sign')) {
+      const result = DIAGRAM_PATTERNS.find(p => p.name === 'login_flow')!.generate(userPrompt);
+      return { summary: 'Created a login flow diagram', elements: result };
+    }
+    
+    if (lowerPrompt.includes('cloudflare') || lowerPrompt.includes('architecture')) {
+      const result = DIAGRAM_PATTERNS.find(p => p.name === 'cloudflare_architecture')!.generate(userPrompt);
+      return { summary: 'Created a Cloudflare architecture diagram', elements: result };
+    }
+    
+    if (lowerPrompt.includes('oauth') || lowerPrompt.includes('authentication flow')) {
+      const result = DIAGRAM_PATTERNS.find(p => p.name === 'oauth_flow')!.generate(userPrompt);
+      return { summary: 'Created an OAuth flow diagram', elements: result };
+    }
+    
+    if (lowerPrompt.includes('microservice') || lowerPrompt.includes('api') || lowerPrompt.includes('service')) {
+      const result = DIAGRAM_PATTERNS.find(p => p.name === 'microservices')!.generate(userPrompt);
+      return { summary: 'Created a microservices diagram', elements: result };
+    }
+    
+    if (lowerPrompt.includes('database') || lowerPrompt.includes('storage') || lowerPrompt.includes('data')) {
+      const result = DIAGRAM_PATTERNS.find(p => p.name === 'database_schema')!.generate(userPrompt);
+      return { summary: 'Created a database schema diagram', elements: result };
+    }
+    
+    // Default fallback - use the first pattern if nothing matches
+    const result = DIAGRAM_PATTERNS[0].generate(userPrompt);
+    return { summary: 'Created a diagram', elements: result };
+  }
+
   private applyPlan(plan: { summary: string; elements: PlannedElement[] } | PlannedElement[]) {
     const nextElements = { ...this.state.canvas.elements };
     const elements = Array.isArray(plan) ? plan : plan.elements;
@@ -299,16 +354,7 @@ Do not include markdown. Focus on creating clean, professional, non-overlapping 
     });
 
     const parsedPlan = this.parsePlan(planner.text);
-    const plan = parsedPlan ?? { 
-      summary: "Created a diagram on the canvas.", 
-      elements: [
-        { type: "rectangle", x: 100, y: 100, width: 180, height: 80, text: "Start", color: "blue" },
-        { type: "arrow", x: 290, y: 140, width: 100, height: 0, color: "grey" },
-        { type: "rectangle", x: 400, y: 100, width: 180, height: 80, text: "Process", color: "green" },
-        { type: "arrow", x: 590, y: 140, width: 100, height: 0, color: "grey" },
-        { type: "rectangle", x: 700, y: 100, width: 180, height: 80, text: "End", color: "violet" },
-      ]
-    };
+    const plan = parsedPlan ?? this.generateFallbackDiagram(userPrompt);
     const summary = parsedPlan ? parsedPlan.summary : "Created a diagram on the canvas.";
     this.applyPlan(plan);
 

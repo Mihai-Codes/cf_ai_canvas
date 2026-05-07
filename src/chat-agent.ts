@@ -6,10 +6,10 @@ import dagre from "dagre";
 import type { CanvasElement, CanvasState } from "./types";
 import { DIAGRAM_PATTERNS } from "./diagram-patterns";
 
-const RANKSEP = 180;
-const NODE_SEP = 80;
-const MARGIN_X = 80;
-const MARGIN_Y = 80;
+const RANKSEP = 80;
+const NODE_SEP = 30;
+const MARGIN_X = 40;
+const MARGIN_Y = 40;
 
 type SemElement = {
   id: string;
@@ -39,7 +39,7 @@ function computeLayout(
   elements: SemElement[]
 ): Array<{ id: string; x: number; y: number; rank: number; width: number; height: number }> {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "LR", nodesep: NODE_SEP, ranksep: RANKSEP, marginx: MARGIN_X, marginy: MARGIN_Y });
+  g.setGraph({ rankdir: "LR", nodesep: NODE_SEP, ranksep: RANKSEP, marginx: MARGIN_X, marginy: MARGIN_Y, align: "UL", edgesep: 0 });
   g.setDefaultEdgeLabel(() => ({}));
 
   // Only non-arrow elements become nodes in the layout graph

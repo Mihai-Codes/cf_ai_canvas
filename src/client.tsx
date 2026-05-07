@@ -1,7 +1,7 @@
 import "./styles.css";
 import "tldraw/tldraw.css";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import i18n from "i18next";
 import { initReactI18next, useTranslation } from "react-i18next";
@@ -457,7 +457,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
 
           if (currentIds.length > 0) editor.deleteShapes(currentIds);
           
-          batches.forEach(batch => {
+          batches.forEach((batch: TLCreateShapePartial[]) => {
             if (batch.length > 0) {
               editor.createShapes(batch);
             }
@@ -499,7 +499,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
             editorRef.current = editor;
             if (shapes.length > 0) {
               editor.createShapes(shapes);
-              editor.zoomToFit({ padding: 100 });
+              editor.zoomToFit();
             }
             editor.updateInstanceState({ isReadonly: true });
           }}

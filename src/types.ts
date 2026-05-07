@@ -66,6 +66,16 @@ export interface CanvasSnapshot {
   createdAt: string;
 }
 
+export type PlannedElement = {
+  type: string;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  text?: string;
+  color?: string;
+};
+
 export interface CanvasState {
   elements: Record<string, CanvasElement>;
   viewportZoom: number;

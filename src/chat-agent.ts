@@ -95,22 +95,36 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
     });
   }
 
-  private getLastUserText(): string {
+  private getLastUserMessage(): { text: string; hasImage: boolean; imageData?: string } {
     for (let index = this.messages.length - 1; index >= 0; index--) {
       const message = this.messages[index] as any;
       if (message.role !== "user") continue;
 
-      if (typeof message.content === "string") return message.content;
-      if (Array.isArray(message.parts)) {
+      let text = "";
+      let hasImage = false;
+      let imageData: string | undefined;
+
+      if (typeof message.content === "string") {
+        text = message.content;
+      } else if (Array.isArray(message.parts)) {
         for (const part of message.parts) {
-          if (typeof part === "object" && part !== null && "text" in part && typeof part.text === "string") {
-            return part.text;
+          if (typeof part === "object" && part !== null) {
+            if ("text" in part && typeof part.text === "string") {
+              text = part.text;
+            } else if ("type" in part && part.type === "image" && "data" in part) {
+              hasImage = true;
+              imageData = part.data;
+            }
           }
         }
       }
+
+      if (text || hasImage) {
+        return { text: text || "Draw a simple diagram", hasImage, imageData };
+      }
     }
 
-    return "Draw a simple diagram";
+    return { text: "Draw a simple diagram", hasImage: false };
   }
 
   private parsePlan(rawText: string): { summary: string; elements: PlannedElement[] } | null {
@@ -153,14 +167,10 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
 
   async onChatMessage(onFinish?: any) {
     const workersai = createWorkersAI({ binding: this.env.AI });
-    const userPrompt = this.getLastUserText();
-
-    // Check if the user attached an image (multimodal input)
-    const lastMessage = this.messages[this.messages.length - 1];
-    const hasImage = lastMessage?.parts?.some((part: any) => part.type === 'image');
+    const { text: userPrompt, hasImage, imageData } = this.getLastUserMessage();
 
     let enhancedPrompt = userPrompt;
-    if (hasImage) {
+    if (hasImage && imageData) {
       // Use Llama 3.2 Vision to analyze the image and extract structure
       const visionModel = workersai("@cf/meta/llama-3.2-11b-vision-instruct-fp8");
       const visionResponse = await generateText({
@@ -168,7 +178,7 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
         system: `You are an expert at analyzing visual diagrams and extracting their structure. 
         Describe the diagram in clear, structured text that can be used to recreate it. 
         Include all nodes, connections, labels, and spatial relationships.`,
-        prompt: `Analyze this diagram image and describe its structure in detail: ${userPrompt}`,
+        prompt: `Analyze this diagram image and describe its structure in detail. User request: ${userPrompt}`,
       });
       enhancedPrompt = `User prompt: ${userPrompt}\n\nImage analysis: ${visionResponse.text}`;
     }

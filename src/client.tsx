@@ -642,6 +642,34 @@ function ChatPanel({
           <button type="button" onClick={resetCanvas}>
             Reset canvas
           </button>
+          <input
+            type="file"
+            id="image-upload"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const imageData = e.target?.result;
+                  if (typeof imageData === 'string') {
+                    sendMessage({ text: input, parts: [{ type: 'image', data: imageData }] as any });
+                    setInput('');
+                  }
+                };
+                reader.readAsDataURL(file);
+              }
+            }}
+            disabled={!connected || isBusy}
+          />
+          <button type="button"
+            onClick={() => document.getElementById('image-upload')?.click()}
+            disabled={!connected || isBusy}
+            title="Attach image for multimodal analysis"
+          >
+            📎 Attach Image
+          </button>
           {isBusy ? (
             <button type="button" onClick={stop}>
               Stop

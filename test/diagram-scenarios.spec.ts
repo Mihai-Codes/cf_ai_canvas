@@ -61,9 +61,10 @@ async function waitForConnection(page: Page, timeout = 20_000) {
 }
 
 /**
- * Wait until BOTH the element-count badge (DO state) AND the tldraw-shape-count
- * (actual tldraw renderer) show at least minCount.
- * This catches the split-brain case where DO has elements but tldraw doesn't render.
+ * Wait until:
+ *  - The element-count badge (DO state) shows >= minCount, AND
+ *  - If tldraw-shape-count exists (new deployment), that also shows >= minCount.
+ * On old deployments without the tldraw-shape-count element, falls back to badge-only.
  */
 async function waitForElements(page: Page, minCount = 1, timeout = 90_000) {
   await page.waitForFunction(
@@ -71,8 +72,14 @@ async function waitForElements(page: Page, minCount = 1, timeout = 90_000) {
       const badge = document.querySelector('[data-testid="element-count"]');
       const tl = document.querySelector('[data-testid="tldraw-shape-count"]');
       const badgeN = parseInt(badge?.textContent?.match(/(\d+)/)?.[1] ?? "0");
-      const tlN = parseInt(tl?.textContent ?? "0");
-      return badgeN >= min && tlN >= min;
+      if (!badge || badgeN < min) return false;
+      // If the tldraw tracking element is present, require it too
+      if (tl) {
+        const tlN = parseInt(tl.textContent ?? "0");
+        return tlN >= min;
+      }
+      // Fallback: old deployment without tracking element
+      return true;
     },
     minCount,
     { timeout },

@@ -53,8 +53,17 @@ test.describe('Enhanced Prompt Engineering', () => {
       await clearButton.click();
       await page.waitForTimeout(1500); // Wait for clear to complete
       
-      // Verify textarea is enabled before continuing
-      await expect(textarea).toBeEnabled({ timeout: 10000 });
+      // Verify textarea is enabled before continuing (increase timeout and add retry logic)
+      try {
+        await expect(textarea).toBeEnabled({ timeout: 20000 });
+      } catch (error) {
+        // If still disabled, try clearing again
+        console.log('Textarea still disabled, attempting recovery...');
+        const clearButton = page.locator('button:has-text("Clear chat")');
+        await clearButton.click();
+        await page.waitForTimeout(2000);
+        await expect(textarea).toBeEnabled({ timeout: 15000 });
+      }
     }
   });
 

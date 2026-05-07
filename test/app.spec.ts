@@ -121,6 +121,8 @@ test.describe('cf_ai_canvas Application Tests', () => {
   });
 
   test('should verify canvas expands for complex diagrams', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.reload();
     const textarea = page.locator('textarea[placeholder="Draw a microservices diagram..."]');
     await textarea.fill('Draw a detailed Cloudflare Workers architecture with React frontend, Worker router, ChatAgent DO, CanvasMCP DO, Workers AI integration, KV storage, and all connections clearly labeled');
     
@@ -128,6 +130,9 @@ test.describe('cf_ai_canvas Application Tests', () => {
     await sendButton.click();
     
     await page.waitForTimeout(8000);
+    
+    // Switch to desktop viewport size again to restore state
+    await page.setViewportSize({ width: 1280, height: 800 });
     
     const canvasPanel = page.locator('.canvas-panel');
     await expect(canvasPanel).toBeVisible();

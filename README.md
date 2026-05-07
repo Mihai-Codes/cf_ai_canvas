@@ -35,8 +35,10 @@ src/server.ts"]
 AIChatAgent session state"]
   mcp["CanvasMCP Durable Object
 Remote MCP server at /mcp"]
-  ai["Workers AI
-Llama 3.3"]
+  aiText["Workers AI
+Llama 3.3 (Text)"]
+  aiVision["Workers AI
+Llama 3.2 Vision"]
   kv["Workers KV
 Named snapshots"]
 
@@ -45,12 +47,48 @@ Named snapshots"]
   frontend -->|"HTTP / WebSocket"| worker
   worker --> chat
   worker --> mcp
-  chat -->|"diagram planning"| ai
+  chat -->|"text analysis"| aiText
+  chat -->|"image analysis"| aiVision
+  aiVision -->|"structure extraction"| aiText
   chat -->|"canvas state"| chat
   mcpClient -->|"Streamable HTTP MCP"| mcp
   mcp -->|"snapshot / restore"| kv
   mcp -->|"17 canvas tools"| mcp
 ```
+
+## Multimodal Diagram Generation
+
+### 🎉 Advanced Features
+
+The system now supports **multimodal input** combining images and text:
+
+- **📎 Image Upload**: Attach diagram sketches or screenshots
+- **🤖 AI Analysis**: Llama 3.2 Vision extracts structure from images
+- **📝 Text Enhancement**: Combine image analysis with text prompts
+- **🎨 Diagram Generation**: Llama 3.3 creates tldraw-compatible shapes
+
+### 📋 Usage Examples
+
+**Text-only mode:**
+```
+"Draw a login flow with success and error paths"
+```
+
+**Multimodal mode:**
+1. Click 📎 Attach Image
+2. Upload a hand-drawn architecture sketch
+3. Add prompt: "Clean up this diagram and add proper labels"
+4. Get a structured, professional diagram
+
+### ⚠️ Current Limitations
+
+See [MODEL_LIMITATIONS.md](MODEL_LIMITATIONS.md) for detailed explanation of:
+- Llama 3.3's spatial reasoning constraints
+- Why complex prompts generate simple diagrams
+- Workarounds and optimization strategies
+- Future enhancement possibilities
+
+**This is expected behavior, not a bug.** Current open-source LLMs have limited spatial reasoning capabilities compared to specialized models like Gemini 1.5 Pro or Claude 3.5 Sonnet.
 
 ## Quick Start
 
@@ -126,6 +164,7 @@ cf_ai_canvas/
 ├── docs/assets/           # Screenshots
 ├── .github/workflows/    # CI/CD pipeline
 ├── PROMPTS.md             # AI prompts used
+├── MODEL_LIMITATIONS.md  # LLM spatial reasoning constraints
 ├── README.md              # Documentation
 └── wrangler.jsonc         # Cloudflare configuration
 ```

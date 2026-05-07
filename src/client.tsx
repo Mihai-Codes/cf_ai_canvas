@@ -563,6 +563,7 @@ function ChatPanel({
 
   const { messages, sendMessage, clearHistory, status, stop } = useAgentChat({
     agent,
+    getInitialMessages: null,
   });
 
   const isBusy = status === "submitted" || status === "streaming";

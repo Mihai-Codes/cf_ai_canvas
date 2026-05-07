@@ -200,18 +200,24 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
 
       return {
         summary: String(parsed.summary ?? "Created a diagram on the canvas."),
-        elements: parsed.elements.slice(0, 24).map((element: any) => ({
-          type: element.type || "rectangle",
-          x: Number.isFinite(element.x) ? element.x : 100,
-          y: Number.isFinite(element.y) ? element.y : 100,
-          width: Number.isFinite(element.width) ? element.width : 120,
-          height: Number.isFinite(element.height) ? element.height : 80,
-          text: typeof element.text === "string" ? element.text : undefined,
-          color: element.color || "blue",
-          ...(element.id && { id: element.id }),
-          ...(element.startBoundTo && { startBoundTo: element.startBoundTo }),
-          ...(element.endBoundTo && { endBoundTo: element.endBoundTo }),
-        })),
+        elements: parsed.elements.slice(0, 24).map((element: any) => {
+          const gridCol = Number.isFinite(element.gridCol) ? element.gridCol : 0;
+          const gridRow = Number.isFinite(element.gridRow) ? element.gridRow : 0;
+          const x = gridCol * 300 + 100;
+          const y = gridRow * 200 + 100;
+          return {
+            type: element.type || "rectangle",
+            x,
+            y,
+            width: Number.isFinite(element.width) ? element.width : 120,
+            height: Number.isFinite(element.height) ? element.height : 80,
+            text: typeof element.text === "string" ? element.text : undefined,
+            color: element.color || "blue",
+            ...(element.id && { id: element.id }),
+            ...(element.startBoundTo && { startBoundTo: element.startBoundTo }),
+            ...(element.endBoundTo && { endBoundTo: element.endBoundTo }),
+          };
+        }),
       };
     } catch (error) {
       console.error("Failed to parse diagram plan:", error);
@@ -316,11 +322,10 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
       If the user provided image analysis, use it to guide your layout.
 
 CRITICAL SPATIAL RULES:
-1. NO OVERLAPPING ELEMENTS - Calculate positions to ensure minimum 150px padding between components. Scale X/Y distances accordingly. Do not place elements exactly at the same origin point.
-2. GRID ALIGNMENT - Use x,y coordinates that are multiples of 200 for extremely clean layouts with plenty of spacing.
-3. SIZE MATTERS - Complex diagrams will expand infinitely so USE AS MUCH SPACE AS NEEDED. Increase coordinates drastically like x: 800, y: 1200 instead of clustering all items in the 100-300 range.
-4. CONSISTENT SPACING - Maintain equal gaps between related elements.
-5. LOGICAL FLOW - Arrange elements to match the described workflow direction (e.g. left-to-right uses strictly increasing X positions).
+1. USE GRID SYSTEM - Never use arbitrary x/y pixel values! Use gridRow (0,1,2...) and gridCol (0,1,2...) instead.
+2. GRID SPACING - Each grid cell is 300px wide x 200px tall. Use gridCol:0, gridCol:1, gridCol:2 for horizontal spacing.
+3. NO OVERLAPPING - The grid system guarantees no overlap since we convert automatically.
+4. LOGICAL FLOW - Left-to-right flows use increasing gridCol, top-to-bottom use increasing gridRow.
 
 STRUCTURED OUTPUT REQUIREMENTS:
 Return ONLY valid JSON with this exact shape:
@@ -329,9 +334,9 @@ Return ONLY valid JSON with this exact shape:
   "elements": [
     {
       "type": "rectangle | ellipse | diamond | triangle | text | arrow | line | note | frame | star | cloud | hexagon",
-      "id": "optional_unique_string_id",
-      "x": 100,
-      "y": 100,
+      "id": "unique_string_id_for_this_element",
+      "gridRow": 0,
+      "gridCol": 0,
       "width": 180,
       "height": 80,
       "text": "clear label under 20 chars",
@@ -341,6 +346,12 @@ Return ONLY valid JSON with this exact shape:
     }
   ]
 }
+
+IMPORTANT: Use gridRow and gridCol for positioning!
+- gridRow: 0, 1, 2, 3... (vertical position)
+- gridCol: 0, 1, 2, 3... (horizontal position)
+- Each grid cell is 300x200 pixels - use multiples like gridCol: 0, 1, 2 for spacing
+- This guarantees no overlap - we handle the pixel conversion automatically
 
 DIAGRAM GENERATION GUIDELINES:
 - Create 4-12 elements for most diagrams (target 6-8 for complexity balance)

@@ -477,7 +477,8 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
           });
           
           editor.zoomToFit({ animation: { duration: 250 } });
-          editor.updateInstanceState({ isReadonly: true });
+          // Keep editable so users can drag components around
+          editor.updateInstanceState({ isReadonly: false });
           setIsRendering(false);
         },
         { history: "ignore" },
@@ -496,7 +497,8 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
             editor.createShapes(shapes);
             editor.zoomToFit({ animation: { duration: 250 } });
           }
-          editor.updateInstanceState({ isReadonly: true });
+          // Keep editable so users can drag components around
+          editor.updateInstanceState({ isReadonly: false });
         },
         { history: "ignore" },
       );
@@ -513,7 +515,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
               editor.createShapes(shapes);
               editor.zoomToFit();
             }
-            editor.updateInstanceState({ isReadonly: false });
+            // Allow dragging by default
           }}
         />
       ) : (

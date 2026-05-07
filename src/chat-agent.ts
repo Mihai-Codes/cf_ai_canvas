@@ -106,7 +106,13 @@ function computeLayout(elements: SemElement[]): Array<{
 
 export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
   initialState = {
-    canvas: { elements: {}, viewportZoom: 1, viewportX: 0, viewportY: 0 },
+    canvas: {
+      elements: {},
+      viewportZoom: 1,
+      viewportX: 0,
+      viewportY: 0,
+      generationId: 0,
+    },
   };
 
   override async onStart(): Promise<void> {
@@ -369,7 +375,11 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
   private updateCanvas(elements: Record<string, CanvasElement>) {
     this.setState({
       ...this.state,
-      canvas: { ...this.state.canvas, elements },
+      canvas: {
+        ...this.state.canvas,
+        elements,
+        generationId: (this.state.canvas.generationId ?? 0) + 1,
+      },
     });
   }
 
@@ -489,41 +499,40 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
   async onChatMessage(onFinish?: any) {
     const workersai = createWorkersAI({ binding: this.env.AI });
     const { text: userPrompt, hasImage, imageData } = this.getLastUserMessage();
+    const promptText = userPrompt || "diagram";
 
-    let enhancedPrompt = this.enhancePrompt(userPrompt, hasImage);
+    // Clear canvas immediately (server-side, no client race condition)
+    // This also increments generationId so even identical shapes re-render on the client.
+    this.updateCanvas({});
 
+    // Build enhanced prompt; handle vision with graceful fallback (never return early)
+    let enhancedPrompt = this.enhancePrompt(promptText, true);
     if (hasImage && imageData) {
       try {
         const b64 = imageData.split(",")[1];
         const visionResponse = await this.env.AI.run(
           "@cf/meta/llama-3.2-11b-vision-instruct",
           {
-            prompt: `Analyze this diagram image and describe its structure in detail. User request: ${userPrompt}`,
+            prompt: `Analyze this diagram image and describe its structure. User request: ${promptText}`,
             image_b64: b64,
           },
         );
-        const visionText = (visionResponse as any).result.response;
-        enhancedPrompt = `User prompt: ${userPrompt}\n\nImage analysis: ${visionText}\n\n${this.enhancePrompt(visionText, false)}`;
-      } catch (error) {
-        // Vision unavailable, show message
-        const errorMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant" as const,
-          parts: [
-            {
-              type: "text" as const,
-              text: "Image analysis is currently unavailable. Please try text-only diagram generation.",
-            },
-          ],
-        };
-        await this.saveMessages([errorMessage]);
-        return;
+        const visionText = (visionResponse as any).result?.response ?? "";
+        if (visionText) {
+          enhancedPrompt = `User prompt: ${promptText}\n\nImage analysis: ${visionText}\n\n${this.enhancePrompt(visionText, false)}`;
+        }
+      } catch (_err) {
+        // Vision unavailable — continue with text-only generation, never bail
+        console.error("Vision analysis failed, using text-only:", _err);
       }
     }
 
-    const planner = await generateText({
-      model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
-      system: `You are an expert diagram generation assistant.
+    // Generate diagram plan — always produces output via fallback on LLM failure
+    let plan: { summary: string; elements: PlannedElement[] };
+    try {
+      const planner = await generateText({
+        model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
+        system: `You are an expert diagram generation assistant.
 Convert user requests into a structured semantic description of the diagram.
 
 CRITICAL: Do NOT output any coordinates. Do NOT output gridCol or gridRow.
@@ -555,25 +564,26 @@ DIAGRAM GENERATION GUIDELINES:
 - Connect elements with arrows using startBoundTo and endBoundTo properties matching shape IDs.
   Use meaningful IDs like "user", "auth", "db" instead of random strings.
 - Avoid crossed connection lines by ordering elements logically
-- Use frames to group related components
 - DO NOT include any x, y, gridCol, gridRow properties — the server computes all positions
 
 Do not include markdown. Focus on creating clean, professional diagrams.`,
-      prompt: enhancedPrompt,
-    });
+        prompt: enhancedPrompt,
+      });
+      plan =
+        this.parseAndLayout(planner.text) ??
+        this.generateFallbackDiagram(promptText);
+    } catch (_err) {
+      console.error("LLM planning failed, using fallback diagram:", _err);
+      plan = this.generateFallbackDiagram(promptText);
+    }
 
-    const parsedPlan = this.parseAndLayout(planner.text);
-    const plan = parsedPlan ?? this.generateFallbackDiagram(userPrompt);
-    const summary = parsedPlan
-      ? parsedPlan.summary
-      : "Created a diagram on the canvas.";
     this.applyPlan(plan);
 
     const result = streamText({
       model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
       system:
         "You are a concise canvas assistant. The canvas has already been updated. Reply in one short sentence with what was created. Do not include JSON or code.",
-      prompt: `Canvas update summary: ${summary}.`,
+      prompt: `Canvas update summary: ${plan.summary}.`,
       onFinish,
     });
 

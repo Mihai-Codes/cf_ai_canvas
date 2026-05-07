@@ -1,14 +1,7 @@
 import "./styles.css";
 import "tldraw/tldraw.css";
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useCallback,
-  Component,
-} from "react";
+import { useEffect, useMemo, useRef, useState, Component } from "react";
 import { createRoot } from "react-dom/client";
 import i18n from "i18next";
 import { initReactI18next, useTranslation } from "react-i18next";
@@ -16,12 +9,18 @@ import { useAgent } from "agents/react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { toRichText } from "@tldraw/editor";
 import {
+  ArrowShapeUtil,
   createShapeId,
   Tldraw,
   type Editor,
   type TLBindingCreate,
   type TLCreateShapePartial,
 } from "tldraw";
+
+// Disable white text-outline halo on arrow labels globally
+const ARROW_SHAPE_UTILS = [
+  ArrowShapeUtil.configure({ showTextOutline: false }),
+];
 import type { UIMessage } from "ai";
 import type {
   CanvasElement,
@@ -191,12 +190,12 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
   if (element.type === "arrow") {
     const props: any = {
       color,
-      dash: element.dash ?? "draw",
-      size: element.size ?? "m",
+      dash: "solid", // solid lines read cleaner than draw style
+      size: "s", // small font keeps labels compact and single-line
       fill: "none",
-      font: element.font ?? "draw",
+      font: "sans", // sans-serif is easier to read at small sizes
       richText: toRichText(text),
-      labelColor: color,
+      labelColor: "black", // always readable regardless of arrow color
       bend: 0,
       start: { x: 0, y: 0 },
       end: { x: 200, y: 0 },
@@ -604,20 +603,28 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
   const editorRef = useRef<Editor | null>(null);
   const lastHashRef = useRef("");
 
+  // Include generationId so same-content re-renders still trigger tldraw updates
+  const generationId = canvas?.generationId ?? 0;
+
   const elements = useMemo(
     () => Object.values(canvas?.elements ?? {}),
-    [canvas?.elements],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canvas?.elements, generationId],
   );
 
   const shapes = useMemo(() => elements.map(toTldrawShape), [elements]);
-
   const bindings = useMemo(() => toTldrawBindings(elements), [elements]);
 
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
 
-    const nextHash = JSON.stringify(shapes);
+    // Hash includes generationId: same shapes but new generation = different hash = update
+    const nextHash = JSON.stringify({
+      s: shapes.length,
+      g: generationId,
+      ids: shapes.map((s) => s.id).join(","),
+    });
     if (nextHash === lastHashRef.current) return;
     lastHashRef.current = nextHash;
 
@@ -632,7 +639,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
             if (bindings.length > 0) {
               editor.createBindings(bindings);
             }
-            editor.zoomToFit({ animation: { duration: 250 } });
+            editor.zoomToFit({ animation: { duration: 300 } });
           }
           editor.updateInstanceState({ isReadonly: false });
         },
@@ -641,7 +648,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
     } catch (err) {
       console.error("Error updating canvas shapes:", err);
     }
-  }, [shapes, bindings]);
+  }, [shapes, bindings, generationId]);
 
   return (
     <div
@@ -650,6 +657,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
     >
       <CanvasErrorBoundary>
         <Tldraw
+          shapeUtils={ARROW_SHAPE_UTILS}
           onMount={(editor) => {
             editorRef.current = editor;
             if (shapes.length > 0) {
@@ -741,13 +749,14 @@ function ChatPanel({
   }
 
   function resetCanvas() {
-    const current = agent.state ?? {
-      canvas: { elements: {}, viewportZoom: 1, viewportX: 0, viewportY: 0 },
-    };
-
     agent.setState({
-      ...current,
-      canvas: { ...current.canvas, elements: {} },
+      canvas: {
+        elements: {},
+        viewportZoom: 1,
+        viewportX: 0,
+        viewportY: 0,
+        generationId: 0,
+      },
     });
   }
 
@@ -874,11 +883,32 @@ function ChatPanel({
 
 function App() {
   const [connected, setConnected] = useState(false);
+  // True after the first successful WebSocket connection per page session.
+  // Prevents repeated canvas clears on DO-hibernation reconnects.
+  const sessionCleared = useRef(false);
 
   const agent = useAgent<ChatAgentState>({
     agent: "ChatAgent",
     name: "default",
-    onOpen: () => setConnected(true),
+    onOpen: () => {
+      setConnected(true);
+      if (!sessionCleared.current) {
+        sessionCleared.current = true;
+        // Wait briefly for the server's initial CF_AGENT_STATE_UPDATE to arrive
+        // so the client transitions old-state → empty, not empty → empty.
+        setTimeout(() => {
+          agent.setState({
+            canvas: {
+              elements: {},
+              viewportZoom: 1,
+              viewportX: 0,
+              viewportY: 0,
+              generationId: 0,
+            },
+          });
+        }, 400);
+      }
+    },
     onClose: () => setConnected(false),
     onError: (event) => console.error("Agent WebSocket error", event),
   });

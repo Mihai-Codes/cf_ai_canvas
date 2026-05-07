@@ -128,9 +128,9 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
       
       // Always add these spatial constraints
       enhanced += `SPATIAL CONSTRAINTS:\n`;
-      enhanced += `- No overlapping elements\n`;
-      enhanced += `- Minimum 50px padding between components\n`;
-      enhanced += `- Use grid-aligned positions (multiples of 100 recommended)\n`;
+      enhanced += `- No overlapping elements. Use x/y increments of 300+ for positioning instead of 50.\n`;
+      enhanced += `- Minimum 150px padding between components\n`;
+      enhanced += `- Use grid-aligned positions (multiples of 200 recommended)\n`;
       enhanced += `- Keep connection lines straight and uncrossed when possible\n`;
       
       // Add visual hierarchy guidance
@@ -141,8 +141,8 @@ export class ChatAgent extends AIChatAgent<Env, ChatAgentState> {
       
       // Add specific coordinate examples
       enhanced += `COORDINATE EXAMPLES:\n`;
-      enhanced += `- Column layout: x=100, x=400, x=700 (300px columns + 100px gutters)\n`;
-      enhanced += `- Row layout: y=100, y=300, y=500 (200px rows + 100px gutters)\n`;
+      enhanced += `- Column layout: x=100, x=500, x=900 (400px columns + 200px gutters)\n`;
+      enhanced += `- Row layout: y=100, y=500, y=900 (400px rows + 200px gutters)\n`;
       enhanced += `- Grid layout: combine x and y patterns above\n`;
     }
     
@@ -353,12 +353,12 @@ DIAGRAM GENERATION GUIDELINES:
 - Use frames to group related components
 
 SPATIAL CALCULATION EXAMPLES:
-- 2-column layout: x=150 and x=550 (400px width + 100px gutter)
-- 3-column layout: x=100, x=400, x=700 (300px columns + 100px gutters)
-- Row spacing: y=100, y=300, y=500 (200px height + 100px gutters)
+- 2-column layout: x=150 and x=750 (600px width + 200px gutter)
+- 3-column layout: x=100, x=700, x=1300 (500px columns + 200px gutters)
+- Row spacing: y=100, y=500, y=900 (300px height + 200px gutters)
 - Decision branches: place alternatives below with clear arrow paths
 
-Do not include markdown. Focus on creating clean, professional, non-overlapping layouts.`,
+Do not include markdown. Focus on creating clean, professional, non-overlapping layouts. Use HUGE distances!`,
       prompt: enhancedPrompt,
     });
 

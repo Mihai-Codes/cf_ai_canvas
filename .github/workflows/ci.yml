@@ -78,9 +78,12 @@ jobs:
 
       - name: Deploy
         if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "3.114.5"
-          command: deploy
+        run: |
+          for attempt in 1 2 3; do
+            echo "Deploy attempt $attempt of 3"
+            npx wrangler deploy && exit 0
+            echo "Attempt $attempt failed, retrying in 15s..."
+            sleep 15
+          done
+          echo "All 3 deploy attempts failed"
+          exit 1

@@ -88,8 +88,8 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
   };
 
   const color = TL_COLOR_MAP[element.color ?? "black"];
-  const width = element.width ?? 120;
-  const height = element.height ?? 80;
+  const width = element.width ?? 100;
+  const height = element.height ?? 60;
   const text = element.text ?? "";
 
   if (element.type === "text") {
@@ -229,7 +229,7 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
 
 function SvgShape({ element }: { element: CanvasElement }) {
   const color = SVG_COLOR_MAP[element.color ?? "black"];
-  const width = element.width ?? 120;
+  const width = element.width ?? 100;
   const height = element.height ?? 80;
   const text = element.text ?? "";
   const strokeProps = {
@@ -388,8 +388,8 @@ function FallbackCanvas({ canvas }: { canvas?: CanvasState }) {
 
   const bounds = elements.reduce(
     (acc, element) => {
-      const width = element.width ?? 120;
-      const height = element.height ?? 80;
+      const width = element.width ?? 100;
+const height = element.height ?? 60;
       return {
         minX: Math.min(acc.minX, element.x),
         minY: Math.min(acc.minY, element.y),
@@ -400,7 +400,7 @@ function FallbackCanvas({ canvas }: { canvas?: CanvasState }) {
     { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
   );
 
-  const padding = 120;
+  const padding = 40;
   const viewBox = [
     bounds.minX - padding,
     bounds.minY - padding,

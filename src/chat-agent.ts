@@ -6,10 +6,10 @@ import dagre from "dagre";
 import type { CanvasElement, CanvasState } from "./types";
 import { DIAGRAM_PATTERNS } from "./diagram-patterns";
 
-const RANKSEP = 80;
-const NODE_SEP = 30;
-const MARGIN_X = 40;
-const MARGIN_Y = 40;
+const RANKSEP = 30;
+const NODE_SEP = 15;
+const MARGIN_X = 20;
+const MARGIN_Y = 20;
 
 type SemElement = {
   id: string;
@@ -47,8 +47,8 @@ function computeLayout(
 
   // Add nodes to Dagre
   nodes.forEach(n => {
-    const w = n.width ?? 180;
-    const h = n.height ?? 80;
+    const w = n.width ?? 120;
+    const h = n.height ?? 60;
     g.setNode(n.id, { width: w, height: h });
   });
 
@@ -63,8 +63,8 @@ function computeLayout(
 
   // Return positions for nodes only
   return nodes.map(n => {
-    const w = n.width ?? 180;
-    const h = n.height ?? 80;
+    const w = n.width ?? 120;
+    const h = n.height ?? 60;
     const raw = g.node(n.id) as any;
     if (!raw) return { id: n.id, x: MARGIN_X, y: MARGIN_Y, rank: 0, width: w, height: h };
     return {

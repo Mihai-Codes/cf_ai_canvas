@@ -21,11 +21,9 @@ const APP = "https://cf-ai-canvas.mc146.workers.dev";
  * test never breaks due to network issues.
  */
 async function fetchDiagramImage(destPath: string): Promise<void> {
-  // A real diagram-style image from the Cloudflare blog (public, stable)
-  // We use any recognisable image; vision model will describe what it sees
-  // and the planner will turn that into a diagram.
-  const DIAGRAM_URL =
-    "https://blog.cloudflare.com/content/images/2023/09/image1-14.png";
+  // A real PNG from httpbin — stable test endpoint, always returns a valid PNG.
+  // Content doesn't matter; we're testing the upload + vision pipeline works.
+  const DIAGRAM_URL = "https://httpbin.org/image/png";
 
   try {
     const res = await fetch(DIAGRAM_URL, { signal: AbortSignal.timeout(8000) });

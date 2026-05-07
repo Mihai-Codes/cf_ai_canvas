@@ -108,7 +108,9 @@ function toTldrawShape(element: CanvasElement): TLCreateShapePartial {
     opacity: 1,
   };
 
-  const color = TL_COLOR_MAP[element.color ?? "black"];
+  // Defensive fallback: LLM can return colours not in our palette (e.g. "teal");
+  // undefined colour causes tldraw ValidationError → transact() rolls back ALL shapes.
+  const color = TL_COLOR_MAP[element.color ?? "black"] ?? "black";
   const width = element.width ?? 100;
   const height = element.height ?? 60;
   const text = element.text ?? "";
@@ -619,35 +621,57 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
     const editor = editorRef.current;
     if (!editor) return;
 
-    // Hash includes generationId: same shapes but new generation = different hash = update
+    // Hash includes generationId: same shapes but new generation = different hash
     const nextHash = JSON.stringify({
       s: shapes.length,
       g: generationId,
       ids: shapes.map((s) => s.id).join(","),
     });
     if (nextHash === lastHashRef.current) return;
-    lastHashRef.current = nextHash;
 
-    try {
-      editor.run(
-        () => {
-          editor.updateInstanceState({ isReadonly: false });
-          const currentIds = editor.getCurrentPageShapes().map((s) => s.id);
-          if (currentIds.length > 0) editor.deleteShapes(currentIds);
-          if (shapes.length > 0) {
-            editor.createShapes(shapes);
-            if (bindings.length > 0) {
-              editor.createBindings(bindings);
+    // CRITICAL: catch ALL errors INSIDE editor.run so transact() never sees a
+    // throw. tldraw's transact() rolls back every change in the batch if the
+    // callback throws — including the prior deleteShapes. Without this guard,
+    // a single bad binding rolls back the entire delete+create batch, leaving
+    // the canvas in a broken state and lastHashRef stuck on the "failed" hash.
+    editor.run(
+      () => {
+        editor.updateInstanceState({ isReadonly: false });
+        const currentIds = editor.getCurrentPageShapes().map((s) => s.id);
+        if (currentIds.length > 0) editor.deleteShapes(currentIds);
+
+        if (shapes.length > 0) {
+          // Create shapes one-by-one so an invalid shape skips rather than aborts
+          for (const shape of shapes) {
+            try {
+              editor.createShapes([shape]);
+            } catch (shapeErr) {
+              console.warn(
+                "[canvas] Skipped shape",
+                (shape as any).type,
+                (shape as any).id,
+                shapeErr,
+              );
             }
-            editor.zoomToFit({ animation: { duration: 300 } });
           }
-          editor.updateInstanceState({ isReadonly: false });
-        },
-        { history: "ignore" },
-      );
-    } catch (err) {
-      console.error("Error updating canvas shapes:", err);
-    }
+          // Create bindings one-by-one so a stale reference skips rather than aborts
+          for (const binding of bindings) {
+            try {
+              editor.createBindings([binding]);
+            } catch (_) {
+              // silently skip: arrow will be unbound but still visible
+            }
+          }
+          editor.zoomToFit({ animation: { duration: 300 } });
+        }
+
+        editor.updateInstanceState({ isReadonly: false });
+      },
+      { history: "ignore" },
+    );
+
+    // Update hash AFTER the run so a failed earlier attempt retries on next state change
+    lastHashRef.current = nextHash;
   }, [shapes, bindings, generationId]);
 
   return (
@@ -661,15 +685,25 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
           onMount={(editor) => {
             editorRef.current = editor;
             if (shapes.length > 0) {
+              // Same defensive individual-create pattern as useEffect above
+              editor.run(
+                () => {
+                  for (const shape of shapes) {
+                    try {
+                      editor.createShapes([shape]);
+                    } catch (_) {}
+                  }
+                  for (const binding of bindings) {
+                    try {
+                      editor.createBindings([binding]);
+                    } catch (_) {}
+                  }
+                },
+                { history: "ignore" },
+              );
               try {
-                editor.createShapes(shapes);
-                if (bindings.length > 0) {
-                  editor.createBindings(bindings);
-                }
                 editor.zoomToFit();
-              } catch (err) {
-                console.error("Error in onMount:", err);
-              }
+              } catch (_) {}
             }
           }}
         />
@@ -883,18 +917,36 @@ function ChatPanel({
 
 function App() {
   const [connected, setConnected] = useState(false);
+  // Cleared once per page session when the first server state arrives.
+  // Safe: fires before any user interaction, so no LLM is running to race with.
+  const initialClearedRef = useRef(false);
 
   const agent = useAgent<ChatAgentState>({
     agent: "ChatAgent",
     name: "default",
-    // NOTE: do NOT call agent.setState here. Any client-side setState that
-    // changes generationId races with onChatMessage's updateCanvas(), causing
-    // the client to see the same generationId twice and skip the tldraw update.
-    // The server clears canvas at the top of every onChatMessage instead.
     onOpen: () => setConnected(true),
     onClose: () => setConnected(false),
     onError: (event) => console.error("Agent WebSocket error", event),
   });
+
+  // When the first real state arrives from the DO, clear any stale canvas from
+  // a previous session so users always start with an empty canvas.
+  useEffect(() => {
+    if (!agent.state || initialClearedRef.current) return;
+    initialClearedRef.current = true;
+    if (Object.keys(agent.state.canvas?.elements ?? {}).length > 0) {
+      agent.setState({
+        canvas: {
+          elements: {},
+          viewportZoom: 1,
+          viewportX: 0,
+          viewportY: 0,
+          generationId: 0,
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent.state]);
 
   const canvas = agent.state?.canvas;
 

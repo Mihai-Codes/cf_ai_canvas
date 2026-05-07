@@ -292,7 +292,8 @@ textarea {
 .canvas-shell {
   position: relative;
   flex: 1;
-  min-height: 0;
+  min-height: 500px;
+  overflow: hidden;
 }
 
 .fallback-empty,

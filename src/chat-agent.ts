@@ -422,10 +422,11 @@ Do not include markdown, explanations, or code comments.`,
   }
 
   private fixLayoutOverlaps(elements: PlannedElement[]): PlannedElement[] {
-    const GRID_SIZE = 120;
-    const MIN_SPACING = 40;
-    const REPULSION_FORCE = 0.1;
-    const MAX_ITERATIONS = 50;
+    const MIN_SPACING = 60;
+    const REPULSION_FORCE = 0.2;
+    const ATTRACTION_FORCE = 0.05;
+    const MAX_ITERATIONS = 100;
+    const COOLING_RATE = 0.99;
     
     if (elements.length <= 1) return [...elements];
     
@@ -436,7 +437,11 @@ Do not include markdown, explanations, or code comments.`,
       y: element.y ?? 100,
       vx: 0,
       vy: 0,
+      width: element.width ?? 120,
+      height: element.height ?? 80,
     }));
+    
+    let temperature = 1.0;
     
     for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
       nodes.forEach((node) => {
@@ -453,13 +458,26 @@ Do not include markdown, explanations, or code comments.`,
           const distance = Math.sqrt(dx * dx + dy * dy);
           
           if (distance < MIN_SPACING) {
-            const force = REPULSION_FORCE / (distance * distance);
+            const force = (REPULSION_FORCE * temperature) / (distance * distance);
             nodeA.vx -= dx * force;
             nodeA.vy -= dy * force;
             nodeB.vx += dx * force;
             nodeB.vy += dy * force;
           }
         });
+        
+        if (i > 0) {
+          const prevNode = nodes[i - 1];
+          const dx = prevNode.x - nodeA.x;
+          const dy = prevNode.y - nodeA.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance > MIN_SPACING * 2) {
+            const force = ATTRACTION_FORCE * temperature * (distance - MIN_SPACING * 2);
+            nodeA.vx += dx * force;
+            nodeA.vy += dy * force;
+          }
+        }
       });
       
       let totalMovement = 0;
@@ -467,17 +485,23 @@ Do not include markdown, explanations, or code comments.`,
         const movement = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
         totalMovement += movement;
         
-        node.x += node.vx;
-        node.y += node.vy;
+        node.x += node.vx * temperature;
+        node.y += node.vy * temperature;
         
-        node.x = Math.max(20, Math.min(1500, node.x));
-        node.y = Math.max(20, Math.min(1500, node.y));
+        node.x = Math.max(20, Math.min(2000, node.x));
+        node.y = Math.max(20, Math.min(2000, node.y));
       });
       
-      if (totalMovement < 0.1) break;
+      temperature *= COOLING_RATE;
+      
+      if (totalMovement < 0.01) break;
     }
     
-    return nodes.map(({ x, y, ...rest }) => ({ ...rest, x, y }));
+    return nodes.map(({ x, y, width, height, ...rest }) => ({ 
+      ...rest, 
+      x: Math.round(x), 
+      y: Math.round(y)
+    }));
   }
 
   private applyPlan(plan: DiagramPlan) {

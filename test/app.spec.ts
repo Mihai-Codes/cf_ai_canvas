@@ -110,7 +110,33 @@ test.describe('cf_ai_canvas Application Tests', () => {
     
     await expect(page.locator('.canvas-panel')).toBeVisible();
     
+    const canvasPanel = page.locator('.canvas-panel');
+    const canvasWidth = await canvasPanel.evaluate(node => node.scrollWidth);
+    const canvasHeight = await canvasPanel.evaluate(node => node.scrollHeight);
+    
+    expect(canvasWidth).toBeGreaterThan(800);
+    expect(canvasHeight).toBeGreaterThan(600);
+    
     await page.screenshot({ path: 'test-results/large-diagram.png', fullPage: true });
+  });
+
+  test('should verify canvas expands for complex diagrams', async ({ page }) => {
+    const textarea = page.locator('textarea[placeholder="Draw a microservices diagram..."]');
+    await textarea.fill('Draw a detailed Cloudflare Workers architecture with React frontend, Worker router, ChatAgent DO, CanvasMCP DO, Workers AI integration, KV storage, and all connections clearly labeled');
+    
+    const sendButton = page.locator('button:has-text("Send")');
+    await sendButton.click();
+    
+    await page.waitForTimeout(8000);
+    
+    const canvasPanel = page.locator('.canvas-panel');
+    await expect(canvasPanel).toBeVisible();
+    
+    const canvasBounds = await canvasPanel.boundingBox();
+    expect(canvasBounds?.width).toBeGreaterThan(600);
+    expect(canvasBounds?.height).toBeGreaterThan(400);
+    
+    await page.screenshot({ path: 'test-results/complex-architecture.png', fullPage: true });
   });
 });
 

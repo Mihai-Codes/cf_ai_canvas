@@ -395,10 +395,13 @@ function FallbackCanvas({ canvas }: { canvas?: CanvasState }) {
     bounds.maxY - bounds.minY + padding * 2,
   ].join(" ");
 
+  const svgWidth = bounds.maxX - bounds.minX + padding * 2;
+  const svgHeight = bounds.maxY - bounds.minY + padding * 2;
+  
   return (
-    <div className="fallback-canvas" aria-label="Read-only generated canvas" role="region" aria-labelledby="canvas-heading">
+    <div className="fallback-canvas" aria-label="Read-only generated canvas" role="region" aria-labelledby="canvas-heading" style={{ width: '100%', overflow: 'auto' }}>
       <h2 id="canvas-heading" className="sr-only">Generated Diagram</h2>
-      <svg viewBox={viewBox} role="img" aria-label="Generated diagram" focusable="false">
+      <svg viewBox={viewBox} role="img" aria-label="Generated diagram" focusable="false" style={{ width: `${svgWidth}px`, height: `${svgHeight}px`, minWidth: '100%', minHeight: '100%' }}>
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
@@ -488,7 +491,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
   }, [shapes, batchProcessShapes, isRendering]);
 
   return (
-    <div className="canvas-shell">
+    <div className="canvas-shell" style={{ width: '100%', height: '100%', minHeight: '500px' }}>
       {TLDRAW_LICENSE_KEY ? (
         <Tldraw
           licenseKey={TLDRAW_LICENSE_KEY}
@@ -496,7 +499,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
             editorRef.current = editor;
             if (shapes.length > 0) {
               editor.createShapes(shapes);
-              editor.zoomToFit();
+              editor.zoomToFit({ padding: 100 });
             }
             editor.updateInstanceState({ isReadonly: true });
           }}

@@ -1,6 +1,6 @@
 # AI Prompts Engineering Documentation
 
-This document records the technical prompts and engineering decisions used to develop `cf_ai_canvas` for the Cloudflare Software Engineering Internship (Summer 2026).
+This document records the technical prompts and engineering decisions used to develop `cf_ai_canvas`.
 
 ## Table of Contents
 

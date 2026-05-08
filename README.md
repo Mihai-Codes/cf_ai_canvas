@@ -1,8 +1,6 @@
 # cf_ai_canvas
 
-**AI-powered collaborative canvas + remote MCP server on Cloudflare Workers**
-
-Built for the Cloudflare Software Engineering Internship (Summer 2026) assignment.
+An AI-powered collaborative canvas with remote MCP server on Cloudflare Workers.
 
 ---
 

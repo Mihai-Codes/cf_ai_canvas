@@ -45,8 +45,10 @@ async function fetchDiagramImage(destPath: string): Promise<void> {
   }
 }
 
-function screenshotPath(name: string) {
-  const dir = path.join(process.cwd(), "test-results");
+function screenshotPath(name: string, saveToDocs = false) {
+  const dir = saveToDocs
+    ? path.join(process.cwd(), "docs", "assets")
+    : path.join(process.cwd(), "test-results");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return path.join(dir, `${name}.png`);
 }
@@ -141,12 +143,17 @@ test.describe("Diagram generation — all three input paths", () => {
     const tlCount = await getTldrawCount(page);
     console.log(`[quick-prompt] badge=${count} tldraw=${tlCount}`);
 
-    await page.screenshot({
-      path: screenshotPath("01-quick-login-flow"),
-      fullPage: true,
-    });
+  // Save to both test-results (for CI) and docs/assets (for README)
+  await page.screenshot({
+    path: screenshotPath("01-quick-login-flow"),
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: screenshotPath("01-quick-login-flow", true),
+    fullPage: true,
+  });
 
-    expect(count).toBeGreaterThanOrEqual(3);
+  expect(count).toBeGreaterThanOrThanOrEqual(3);
 
     // Verify the canvas panel is still visible (not crashed / white-screened)
     await expect(page.locator(".canvas-panel")).toBeVisible();
@@ -175,12 +182,16 @@ test.describe("Diagram generation — all three input paths", () => {
     const tlCount = await getTldrawCount(page);
     console.log(`[quick-prompt] badge=${count} tldraw=${tlCount}`);
 
-    await page.screenshot({
-      path: screenshotPath("02-quick-cloudflare-arch"),
-      fullPage: true,
-    });
+  await page.screenshot({
+    path: screenshotPath("02-quick-cloudflare-arch"),
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: screenshotPath("02-quick-cloudflare-arch", true),
+    fullPage: true,
+  });
 
-    expect(count).toBeGreaterThanOrEqual(4);
+  expect(count).toBeGreaterThanOrEqual(4);
     await expect(page.locator(".canvas-panel")).toBeVisible();
   });
 
@@ -199,12 +210,16 @@ test.describe("Diagram generation — all three input paths", () => {
     const tlCount = await getTldrawCount(page);
     console.log(`[quick-prompt] badge=${count} tldraw=${tlCount}`);
 
-    await page.screenshot({
-      path: screenshotPath("03-quick-oauth-flow"),
-      fullPage: true,
-    });
+  await page.screenshot({
+    path: screenshotPath("03-quick-oauth-flow"),
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: screenshotPath("03-quick-oauth-flow", true),
+    fullPage: true,
+  });
 
-    expect(count).toBeGreaterThanOrEqual(4);
+  expect(count).toBeGreaterThanOrEqual(4);
     await expect(page.locator(".canvas-panel")).toBeVisible();
   });
 
@@ -231,12 +246,16 @@ test.describe("Diagram generation — all three input paths", () => {
     const tlCount = await getTldrawCount(page);
     console.log(`[manual] badge=${count} tldraw=${tlCount}`);
 
-    await page.screenshot({
-      path: screenshotPath("04-manual-microservices"),
-      fullPage: true,
-    });
+  await page.screenshot({
+    path: screenshotPath("04-manual-microservices"),
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: screenshotPath("04-manual-microservices", true),
+    fullPage: true,
+  });
 
-    expect(count).toBeGreaterThanOrEqual(4);
+  expect(count).toBeGreaterThanOrEqual(4);
     await expect(page.locator(".canvas-panel")).toBeVisible();
   });
 
@@ -255,12 +274,16 @@ test.describe("Diagram generation — all three input paths", () => {
     const tlCount2 = await getTldrawCount(page);
     console.log(`[manual-data] badge=${count} tldraw=${tlCount2}`);
 
-    await page.screenshot({
-      path: screenshotPath("05-manual-data-pipeline"),
-      fullPage: true,
-    });
+  await page.screenshot({
+    path: screenshotPath("05-manual-data-pipeline"),
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: screenshotPath("05-manual-data-pipeline", true),
+    fullPage: true,
+  });
 
-    expect(count).toBeGreaterThanOrEqual(4);
+  expect(count).toBeGreaterThanOrEqual(4);
   });
 
   // -------------------------------------------------------------------------
@@ -289,12 +312,16 @@ test.describe("Diagram generation — all three input paths", () => {
         .then(() => false),
     ]);
 
-    await page.screenshot({
-      path: screenshotPath("06-image-upload"),
-      fullPage: true,
-    });
+  await page.screenshot({
+    path: screenshotPath("06-image-upload"),
+    fullPage: true,
+  });
+  await page.screenshot({
+    path: screenshotPath("06-image-upload", true),
+    fullPage: true,
+  });
 
-    if (gotShapes) {
+  if (gotShapes) {
       const count = await getElementCount(page);
       console.log(`[image-prompt] vision path: ${count} elements generated`);
       expect(count).toBeGreaterThanOrEqual(1);

@@ -238,39 +238,53 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     elements: PlannedElement[];
   } {
     const lowerPrompt = userPrompt.toLowerCase();
-    let patternName = DIAGRAM_PATTERNS[0].name;
-    for (const pattern of DIAGRAM_PATTERNS) {
-      if (pattern.keywords.some((keyword) => lowerPrompt.includes(keyword))) {
-        patternName = pattern.name;
-        break;
-      }
-    }
+    let patternName: string | null = null;
+
+    // First pass: check explicit keyword overrides (most specific wins)
     if (
       lowerPrompt.includes("login") ||
-      lowerPrompt.includes("auth") ||
-      lowerPrompt.includes("sign")
+      lowerPrompt.includes("sign in") ||
+      lowerPrompt.includes("sign-in") ||
+      lowerPrompt.includes("credentials")
     ) {
       patternName = "login_flow";
     } else if (
       lowerPrompt.includes("cloudflare") ||
-      lowerPrompt.includes("architecture")
+      (lowerPrompt.includes("workers") && lowerPrompt.includes("ai"))
     ) {
       patternName = "cloudflare_architecture";
-    } else if (lowerPrompt.includes("oauth")) {
+    } else if (
+      lowerPrompt.includes("oauth") ||
+      lowerPrompt.includes("authorization code")
+    ) {
       patternName = "oauth_flow";
     } else if (
       lowerPrompt.includes("microservice") ||
-      lowerPrompt.includes("service")
+      (lowerPrompt.includes("api gateway") && lowerPrompt.includes("service"))
     ) {
       patternName = "microservices";
     } else if (
-      lowerPrompt.includes("database") ||
-      lowerPrompt.includes("storage") ||
-      lowerPrompt.includes("data")
+      lowerPrompt.includes("data pipeline") ||
+      lowerPrompt.includes("etl") ||
+      (lowerPrompt.includes("warehouse") && lowerPrompt.includes("transform"))
     ) {
       patternName = "data_flow";
     }
-    const pattern = DIAGRAM_PATTERNS.find((p) => p.name === patternName)!;
+
+    // Second pass: fall back to pattern keyword matching
+    if (!patternName) {
+      for (const pattern of DIAGRAM_PATTERNS) {
+        if (pattern.keywords.some((keyword) => lowerPrompt.includes(keyword))) {
+          patternName = pattern.name;
+          break;
+        }
+      }
+    }
+
+    // Default to first pattern if nothing matched
+    const pattern = DIAGRAM_PATTERNS.find(
+      (p) => p.name === (patternName ?? DIAGRAM_PATTERNS[0].name),
+    ) ?? DIAGRAM_PATTERNS[0];
     const rawElements = pattern.generate(userPrompt);
 
     // Grid constants — 280px column width, 170px row height, 50px origin
@@ -501,25 +515,43 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     const { text: userPrompt, hasImage, imageData } = this.getLastUserMessage();
     const promptText = userPrompt || "diagram";
 
+    console.log("[ChatAgent] Starting generation:", {
+      promptLength: promptText.length,
+      hasImage,
+      messageCount: this.messages.length,
+    });
+
     // Clear canvas immediately (server-side, no client race condition)
     // This also increments generationId so even identical shapes re-render on the client.
     this.updateCanvas({});
+    console.log("[ChatAgent] Canvas cleared, generationId incremented");
 
     // Build enhanced prompt; handle vision with graceful fallback (never return early)
     let enhancedPrompt = this.enhancePrompt(promptText, true);
     if (hasImage && imageData) {
       try {
-        const b64 = imageData.split(",")[1];
-        const visionResponse = await this.env.AI.run(
-          "@cf/meta/llama-3.2-11b-vision-instruct",
-          {
-            prompt: `Analyze this diagram image and describe its structure. User request: ${promptText}`,
-            image_b64: b64,
-          },
-        );
-        const visionText = (visionResponse as any).result?.response ?? "";
-        if (visionText) {
-          enhancedPrompt = `User prompt: ${promptText}\n\nImage analysis: ${visionText}\n\n${this.enhancePrompt(visionText, false)}`;
+        // Handle both data URLs (data:image/png;base64,...) and raw base64
+        const b64 = imageData.includes(",")
+          ? imageData.split(",")[1]
+          : imageData;
+        if (!b64) {
+          console.warn("[ChatAgent] Invalid image data format, skipping vision");
+        } else {
+          console.log("[ChatAgent] Running vision analysis on attached image...");
+          const visionResponse = await this.env.AI.run(
+            "@cf/meta/llama-3.2-11b-vision-instruct",
+            {
+              prompt: `Analyze this diagram image and describe its structure. User request: ${promptText}`,
+              image_b64: b64,
+            },
+          );
+          const visionText = (visionResponse as any).result?.response ?? "";
+          if (visionText) {
+            console.log(
+              "[ChatAgent] Vision analysis successful, enhancing prompt with image context",
+            );
+            enhancedPrompt = `User prompt: ${promptText}\n\nImage analysis: ${visionText}\n\n${this.enhancePrompt(visionText, false)}`;
+          }
         }
       } catch (_err) {
         // Vision unavailable — continue with text-only generation, never bail
@@ -530,6 +562,7 @@ export class ChatAgent extends AIChatAgent<Env, { canvas: CanvasState }> {
     // Generate diagram plan — always produces output via fallback on LLM failure
     let plan: { summary: string; elements: PlannedElement[] };
     try {
+      console.log("[ChatAgent] Calling Llama 3.3 for diagram planning...");
       const planner = await generateText({
         model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
         system: `You are an expert diagram generation assistant.
@@ -562,15 +595,17 @@ DIAGRAM GENERATION GUIDELINES:
 - Use appropriate shapes: rectangles for components, diamonds for decisions, ellipses for start/end
 - Implement color coding: blue=primary, green=success, red=errors, grey=secondary
 - Connect elements with arrows using startBoundTo and endBoundTo properties matching shape IDs.
-  Use meaningful IDs like "user", "auth", "db" instead of random strings.
+Use meaningful IDs like "user", "auth", "db" instead of random strings.
 - Avoid crossed connection lines by ordering elements logically
 - DO NOT include any x, y, gridCol, gridRow properties — the server computes all positions
 
 Do not include markdown. Focus on creating clean, professional diagrams.`,
         prompt: enhancedPrompt,
       });
+      console.log("[ChatAgent] LLM response received, parsing...");
       // ?? only catches null/undefined; also fall back when LLM returns {elements:[]}
       const parsed = this.parseAndLayout(planner.text);
+      console.log("[ChatAgent] Parsed elements:", parsed?.elements.length ?? 0);
       plan =
         parsed && parsed.elements.length > 0
           ? parsed
@@ -580,7 +615,9 @@ Do not include markdown. Focus on creating clean, professional diagrams.`,
       plan = this.generateFallbackDiagram(promptText);
     }
 
+    console.log("[ChatAgent] Applying plan with", plan.elements.length, "elements");
     this.applyPlan(plan);
+    console.log("[ChatAgent] Canvas updated, generationId:", this.state.canvas.generationId);
 
     const result = streamText({
       model: workersai("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),

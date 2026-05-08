@@ -603,6 +603,7 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
   // Calling setState inside editor.store.listen fires React re-renders mid-transact,
   // which causes tldraw to throw and CanvasErrorBoundary to replace the canvas.
   const tldrawSpanRef = useRef<HTMLSpanElement>(null);
+  const isMountedRef = useRef(false);
 
   // Include generationId so same-content re-renders still trigger tldraw updates
   const generationId = canvas?.generationId ?? 0;
@@ -617,22 +618,31 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
   const bindings = useMemo(() => toTldrawBindings(elements), [elements]);
 
   useEffect(() => {
+    // Skip if not mounted yet (prevents double-mount crash in StrictMode)
+    if (!isMountedRef.current) return;
+
     const editor = editorRef.current;
     if (!editor) return;
 
-    // Hash includes generationId: same shapes but new generation = different hash
+    // Include shapes, bindings, AND generationId in the hash so identical
+    // shapes with a new generation trigger a full re-render (server clear/set).
     const nextHash = JSON.stringify({
       s: shapes.length,
+      b: bindings.length,
       g: generationId,
       ids: shapes.map((s) => s.id).join(","),
     });
-    if (nextHash === lastHashRef.current) return;
+    if (nextHash === lastHashRef.current) {
+      console.log("[CanvasView] Hash unchanged, skipping render:", nextHash);
+      return;
+    }
+    console.log("[CanvasView] Hash changed, updating canvas:", {
+      shapes: shapes.length,
+      bindings: bindings.length,
+      generationId,
+    });
+    lastHashRef.current = nextHash;
 
-    // CRITICAL: catch ALL errors INSIDE editor.run so transact() never sees a
-    // throw. tldraw's transact() rolls back every change in the batch if the
-    // callback throws — including the prior deleteShapes. Without this guard,
-    // a single bad binding rolls back the entire delete+create batch, leaving
-    // the canvas in a broken state and lastHashRef stuck on the "failed" hash.
     editor.run(
       () => {
         editor.updateInstanceState({ isReadonly: false });
@@ -669,23 +679,20 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
       { history: "ignore" },
     );
 
-    // Update span directly (no React setState) so Playwright can read it
     if (tldrawSpanRef.current) {
       tldrawSpanRef.current.textContent = String(
         editorRef.current?.getCurrentPageShapes().length ?? 0,
       );
     }
-    // Update hash AFTER the run so a failed earlier attempt retries on next state change
-    lastHashRef.current = nextHash;
-    // zoomToFit OUTSIDE editor.run: shapes committed, DOM can be measured
-    if (shapes.length > 0) {
-      setTimeout(() => {
-        try {
-          editorRef.current?.zoomToFit({ animation: { duration: 300 } });
-        } catch (_) {}
-      }, 0);
-    }
   }, [shapes, bindings, generationId]);
+
+  // Mount effect — tracks when CanvasView is mounted to prevent updates before tldraw is ready
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   return (
     <div
@@ -732,6 +739,10 @@ function CanvasView({ canvas }: { canvas?: CanvasState }) {
                 );
               }
             }
+            // Return cleanup to prevent double-mount issues (React StrictMode / re-renders)
+            return () => {
+              editorRef.current = null;
+            };
           }}
         />
       </CanvasErrorBoundary>
@@ -961,7 +972,12 @@ function App() {
   useEffect(() => {
     if (!agent.state || initialClearedRef.current) return;
     initialClearedRef.current = true;
-    if (Object.keys(agent.state.canvas?.elements ?? {}).length > 0) {
+    const elementCount = Object.keys(agent.state.canvas?.elements ?? {}).length;
+    console.log("[App] First state arrived from DO:", {
+      elementCount,
+      hasCanvas: !!agent.state.canvas,
+    });
+    if (elementCount > 0) {
       agent.setState({
         canvas: {
           elements: {},
@@ -971,6 +987,7 @@ function App() {
           generationId: 0,
         },
       });
+      console.log("[App] Cleared stale canvas from previous session");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agent.state]);

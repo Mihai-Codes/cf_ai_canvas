@@ -13,9 +13,9 @@ An AI-powered collaborative canvas with remote MCP server on Cloudflare Workers.
 
 ---
 
-## Assignment Mapping
+## Technical Overview
 
-| Requirement | Implementation |
+| Feature | Implementation |
 |---|---|
 | **LLM integration** | Workers AI — Llama 3.3 70B (text generation) + Llama 3.2 11B Vision (image analysis) |
 | **Workflow / coordination** | `ChatAgent` Durable Object orchestrates intent routing, LLM calls, canvas state updates, and streaming responses |
